@@ -1,5 +1,11 @@
+<script setup lang="ts">
+import Page from '@/components/Layout/Page.vue'
+</script>
+
 <template>
-  <div class="view assets">
-    <h1>Assets</h1>
-  </div>
+  <Page title="Assets">
+    <template #container>
+      <!-- Assets content -->
+    </template>
+  </Page>
 </template>

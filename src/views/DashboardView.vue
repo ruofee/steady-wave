@@ -1,5 +1,11 @@
+<script setup lang="ts">
+import Page from '@/components/Layout/Page.vue'
+</script>
+
 <template>
-  <div class="view dashboard">
-    <h1>Dashboard</h1>
-  </div>
+  <Page title="Steady Wave Dashboard">
+    <template #container>
+      <!-- Dashboard content -->
+    </template>
+  </Page>
 </template>

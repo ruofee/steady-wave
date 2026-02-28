@@ -1,5 +1,11 @@
+<script setup lang="ts">
+import Page from '@/components/Layout/Page.vue'
+</script>
+
 <template>
-  <div class="view transparency">
-    <h1>Transparency</h1>
-  </div>
+  <Page title="Transparency">
+    <template #container>
+      <!-- Transparency content -->
+    </template>
+  </Page>
 </template>

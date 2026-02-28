@@ -1,5 +1,11 @@
+<script setup lang="ts">
+import Page from '@/components/Layout/Page.vue'
+</script>
+
 <template>
-  <div class="view ai-lab">
-    <h1>AI Lab</h1>
-  </div>
+  <Page title="AI Lab">
+    <template #container>
+      <!-- AI Lab content -->
+    </template>
+  </Page>
 </template>

@@ -15,11 +15,11 @@ import Sidebar from './Sidebar.vue'
 .layout {
   display: flex;
   min-height: 100vh;
+  background-color: rgb(248, 249, 251);
 }
 
 .main-content {
   flex: 1;
-  padding: 2rem;
   overflow-y: auto;
 }
 </style>
