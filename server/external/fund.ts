@@ -27,7 +27,7 @@ const fetchFundInfo = (fundCode: string): Promise<FundInfo> => {
       res.on('end', () => {
         try {
           const json = JSON.parse(data)
-          
+
           if (!json.Data || !json.Data.LSJZList || json.Data.LSJZList.length === 0) {
             throw new Error('No fund data found')
           }

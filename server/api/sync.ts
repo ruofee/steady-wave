@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { getDb, type Overview } from '../db.js'
-import { fetchFundInfo } from '../utils/fund.js'
+import { fetchFundInfo } from '../external/fund.js'
 
 const router = Router()
 

@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { Low } from 'lowdb'
 import { getDb, Database, Fund } from '../db.js'
-import { fetchFundInfo } from '../utils/fund.js'
+import { fetchFundInfo } from '../external/fund.js'
 import { add, subtract, multiply, divide } from '../utils/math.js'
 
 const router = Router()
@@ -26,7 +26,7 @@ interface FundWithProfit {
   updatedAt: string
 }
 
-const calculateFundProfit = (fund: Fund): FundWithProfit => {
+export const calculateFundProfit = (fund: Fund): FundWithProfit => {
   const currentValue = fund.netAssetValue
     ? multiply(fund.netAssetValue, fund.shares)
     : 0
@@ -56,7 +56,7 @@ const calculateFundProfit = (fund: Fund): FundWithProfit => {
   }
 }
 
-const updateOverview = async (db: Low<Database>) => {
+export const updateOverview = async (db: Low<Database>) => {
   const fundsWithProfit = db.data.funds.map(calculateFundProfit)
 
   const totalValue = fundsWithProfit.reduce((sum, f) => add(sum, f.currentValue), 0)
