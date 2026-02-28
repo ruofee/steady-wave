@@ -26,32 +26,64 @@ router.get('/search', async (req, res) => {
 // 新增基金
 router.post('/', async (req, res) => {
   try {
-    const { fundName, fundCode, cost, shares } = req.body
-    if (!fundName || !fundCode || typeof cost !== 'number' || typeof shares !== 'number') {
+    const { fundName, fundCode, code, name, cost, shares } = req.body
+    
+    const finalFundCode = String(fundCode || code || '').trim()
+    const finalFundName = String(fundName || name || '').trim()
+    
+    if (!finalFundName || !finalFundCode) {
       res.status(400).json({
         success: false,
-        message: '缺少 fundName、fundCode、cost 或 shares',
+        message: '缺少基金名称或基金代码',
       })
       return
     }
+    
+    if (typeof cost !== 'number' || cost <= 0) {
+      res.status(400).json({
+        success: false,
+        message: '持仓成本价必须大于0',
+      })
+      return
+    }
+    
+    if (typeof shares !== 'number' || shares <= 0) {
+      res.status(400).json({
+        success: false,
+        message: '持仓数量必须大于0',
+      })
+      return
+    }
+    
     const db = await getDb()
-    if (db.data.funds.some((f) => f.fundCode === fundCode)) {
+    if (db.data.funds.some((f) => f.fundCode === finalFundCode)) {
       res.status(400).json({
         success: false,
         message: '该基金已存在',
       })
       return
     }
+    
     const now = new Date().toISOString()
     const fund = {
       id: randomUUID(),
-      fundName: String(fundName).trim(),
-      fundCode: String(fundCode).trim(),
+      fundName: finalFundName,
+      fundCode: finalFundCode,
       cost: Number(cost),
       shares: Number(shares),
       createdAt: now,
       updatedAt: now,
+      totalCost: 0,
+      totalProfit: 0,
+      profitRate: 0,
+      yesterdayProfit: 0,
+      yesterdayProfitRate: 0,
+      netAssetValue: 0,
+      accumulatedValue: 0,
+      netValueDate: '',
+      dayGrowthRate: 0,
     }
+    
     try {
       const info = await fetchFundInfo(fund.fundCode)
       fund.netAssetValue = info.netAssetValue
@@ -61,6 +93,7 @@ router.post('/', async (req, res) => {
     } catch {
       // 忽略净值拉取失败，仅保存成本与份额
     }
+    
     db.data.funds.push(fund)
     await updateOverview(db)
     const withProfit = calculateFundProfit(fund)

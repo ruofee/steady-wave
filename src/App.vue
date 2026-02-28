@@ -2,6 +2,7 @@
 import { onMounted } from 'vue'
 
 import Layout from './components/Layout/index.vue'
+import FundDrawer from './components/FundDrawer/FundDrawer.vue'
 
 import { useDataStore } from './store'
 
@@ -17,4 +18,5 @@ onMounted(() => {
     <div v-if="dataStore.loading">Loading...</div>
     <RouterView v-else />
   </Layout>
+  <FundDrawer />
 </template>

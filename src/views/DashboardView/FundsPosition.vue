@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { useFundsStore } from '@/store'
+import { useFundsStore, useFundDrawerStore } from '@/store'
 import Card from '@/components/Card.vue'
 import ProfitIcon from '@/assets/icons/profit.svg?raw'
 import LossIcon from '@/assets/icons/loss.svg?raw'
@@ -9,6 +9,7 @@ type SortField = 'totalCost' | 'yesterdayProfit' | 'totalProfit'
 type SortOrder = 'asc' | 'desc' | null
 
 const fundsStore = useFundsStore()
+const fundDrawerStore = useFundDrawerStore()
 
 const sortField = ref<SortField | null>(null)
 const sortOrder = ref<SortOrder>(null)
@@ -64,7 +65,7 @@ const getProfitClass = (value: number) => {
 const isProfit = (value: number) => value >= 0
 
 const handleAddFund = () => {
-  console.log('新增基金')
+  fundDrawerStore.open()
 }
 </script>
 
@@ -114,7 +115,7 @@ const handleAddFund = () => {
                 <div class="fund-name-text">{{ fund.fundName }}</div>
                 <div class="fund-code">{{ fund.fundCode }}</div>
               </td>
-              <td class="fund-amount">¥{{ formatAmount(fund.totalCost) }}</td>
+              <td class="fund-amount">¥{{ formatAmount(fund.currentValue) }}</td>
               <td class="fund-holding-profit">
                 <div class="fund-holding-profit-wrapper">
                   <span :class="['fund-profit', getProfitClass(fund.yesterdayProfit)]">

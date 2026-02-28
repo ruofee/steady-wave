@@ -63,6 +63,7 @@ export const useDataStore = defineStore('data', () => {
           yesterdayProfit: fund.yesterdayProfit,
           yesterdayProfitRate: fund.yesterdayProfitRate,
           profitRate: fund.profitRate,
+          currentValue: fund.currentValue,
         }))
         
         // 设置 funds store

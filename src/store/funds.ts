@@ -11,6 +11,7 @@ export interface Fund {
   totalCost: number
   totalProfit: number
   profitRate: number
+  currentValue: number
   yesterdayProfit: number
   yesterdayProfitRate: number
   netAssetValue?: number
@@ -48,7 +49,7 @@ export const useFundsStore = defineStore('funds', () => {
     }
   }
 
-  const addFund = async (fundData: Omit<Fund, 'id' | 'createdAt' | 'updatedAt'>) => {
+  const addFund = async (fundData: Pick<Fund, 'fundName' | 'fundCode' | 'cost' | 'shares'>) => {
     loading.value = true
     error.value = null
     try {
