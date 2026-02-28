@@ -92,16 +92,6 @@ const handleClose = () => {
 }
 
 const handleConfirm = async () => {
-  if (editingFund.value) {
-    return
-  }
-  
-  const fund = selectedFund.value
-  if (!fund) {
-    submitError.value = '请选择基金'
-    return
-  }
-  
   const costNum = typeof cost.value === 'number' ? cost.value : parseFloat(String(cost.value))
   const sharesNum = typeof shares.value === 'number' ? shares.value : parseFloat(String(shares.value))
   
@@ -119,14 +109,29 @@ const handleConfirm = async () => {
   submitError.value = ''
   
   try {
-    await fundsStore.addFund({
-      fundName: fund.fundName,
-      fundCode: fund.fundCode,
-      cost: costNum,
-      shares: sharesNum,
-    })
+    if (editingFund.value) {
+      // 编辑模式：更新基金
+      await fundsStore.updateFund(editingFund.value.fundCode, {
+        cost: costNum,
+        shares: sharesNum,
+      })
+    } else {
+      // 新增模式：添加基金
+      const fund = selectedFund.value
+      if (!fund) {
+        submitError.value = '请选择基金'
+        return
+      }
+      
+      await fundsStore.addFund({
+        fundName: fund.fundName,
+        fundCode: fund.fundCode,
+        cost: costNum,
+        shares: sharesNum,
+      })
+    }
     
-    await dataStore.getData()
+    await dataStore.getData({ isLoading: false })
     handleClose()
   } catch (e) {
     submitError.value = e instanceof Error ? e.message : '提交失败'

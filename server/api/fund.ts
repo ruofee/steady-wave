@@ -107,4 +107,68 @@ router.post('/', async (req, res) => {
   }
 })
 
+// 修改基金
+router.put('/:fundCode', async (req, res) => {
+  try {
+    const { fundCode } = req.params
+    const { cost, shares } = req.body
+    
+    if (!fundCode) {
+      res.status(400).json({
+        success: false,
+        message: '缺少基金代码',
+      })
+      return
+    }
+    
+    if (cost !== undefined && (typeof cost !== 'number' || cost <= 0)) {
+      res.status(400).json({
+        success: false,
+        message: '持仓成本价必须大于0',
+      })
+      return
+    }
+    
+    if (shares !== undefined && (typeof shares !== 'number' || shares <= 0)) {
+      res.status(400).json({
+        success: false,
+        message: '持仓数量必须大于0',
+      })
+      return
+    }
+    
+    const db = await getDb()
+    const fund = db.data.funds.find((f) => f.fundCode === fundCode)
+    
+    if (!fund) {
+      res.status(404).json({
+        success: false,
+        message: '基金不存在',
+      })
+      return
+    }
+    
+    if (cost !== undefined) {
+      fund.cost = Number(cost)
+    }
+    
+    if (shares !== undefined) {
+      fund.shares = Number(shares)
+    }
+    
+    fund.updatedAt = new Date().toISOString()
+    
+    await updateOverview(db)
+    const withProfit = calculateFundProfit(fund)
+    
+    res.json({ success: true, data: withProfit })
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: '修改基金失败',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    })
+  }
+})
+
 export default router

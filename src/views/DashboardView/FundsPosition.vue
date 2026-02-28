@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useFundsStore, useFundDrawerStore } from '@/store'
+import type { Fund } from '@/store/funds'
 import Card from '@/components/Card.vue'
 import ProfitIcon from '@/assets/icons/profit.svg?raw'
 import LossIcon from '@/assets/icons/loss.svg?raw'
@@ -67,6 +68,10 @@ const isProfit = (value: number) => value >= 0
 const handleAddFund = () => {
   fundDrawerStore.open()
 }
+
+const handleEditFund = (fund: Fund) => {
+  fundDrawerStore.open(fund)
+}
 </script>
 
 <template>
@@ -112,8 +117,15 @@ const handleAddFund = () => {
           <tbody>
             <tr v-for="fund in funds" :key="fund.id">
               <td class="fund-name">
-                <div class="fund-name-text">{{ fund.fundName }}</div>
-                <div class="fund-code">{{ fund.fundCode }}</div>
+                <div class="fund-name-content">
+                  <div class="fund-name-info">
+                    <div class="fund-name-text">{{ fund.fundName }}</div>
+                    <div class="fund-code">{{ fund.fundCode }}</div>
+                  </div>
+                  <button class="fund-edit-btn" @click="handleEditFund(fund)">
+                    编辑
+                  </button>
+                </div>
               </td>
               <td class="fund-amount">¥{{ formatAmount(fund.currentValue) }}</td>
               <td class="fund-holding-profit">
@@ -245,6 +257,18 @@ const handleAddFund = () => {
 }
 
 .fund-name {
+  &-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  &-info {
+    flex: 1;
+    min-width: 0;
+  }
+
   &-text {
     margin-bottom: 4px;
     font-weight: 500;
@@ -254,6 +278,29 @@ const handleAddFund = () => {
 .fund-code {
   font-size: 0.75rem;
   color: var(--color-text-tertiary);
+}
+
+.fund-edit-btn {
+  padding: 4px 12px;
+  font-size: 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background-color: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+  opacity: 0;
+  flex-shrink: 0;
+
+  &:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+    background-color: var(--color-primary-light);
+  }
+}
+
+tbody tr:hover .fund-edit-btn {
+  opacity: 1;
 }
 
 .fund-amount {

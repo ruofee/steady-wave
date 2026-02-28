@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { get, post, del } from '@/packages/request'
+import { get, post, del, put } from '@/packages/request'
 
 export interface Fund {
   id: string
@@ -66,6 +66,26 @@ export const useFundsStore = defineStore('funds', () => {
     }
   }
 
+  const updateFund = async (fundCode: string, fundData: Partial<Pick<Fund, 'cost' | 'shares'>>) => {
+    loading.value = true
+    error.value = null
+    try {
+      const response = await put<Fund>(`/funds/${fundCode}`, fundData)
+      if (response.data) {
+        const index = funds.value.findIndex(f => f.fundCode === fundCode)
+        if (index !== -1) {
+          funds.value[index] = response.data
+        }
+      }
+      return response.data
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : '更新基金失败'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
   const deleteFund = async (id: string) => {
     loading.value = true
     error.value = null
@@ -86,6 +106,7 @@ export const useFundsStore = defineStore('funds', () => {
     error,
     fetchFunds,
     addFund,
+    updateFund,
     deleteFund,
   }
 })

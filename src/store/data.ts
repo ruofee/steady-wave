@@ -36,8 +36,16 @@ export const useDataStore = defineStore('data', () => {
   const fundsStore = useFundsStore()
   const overviewStore = useOverviewStore()
 
-  const getData = async (forceUpdate = false) => {
-    loading.value = true
+  const getData = async (payload?: {
+    forceUpdate?: boolean
+    isLoading?: boolean
+  }) => {
+    const { forceUpdate = false, isLoading = true } = payload || {}
+
+    if (isLoading) {
+      loading.value = true
+    }
+
     error.value = null
     
     try {
@@ -78,7 +86,9 @@ export const useDataStore = defineStore('data', () => {
       error.value = err instanceof Error ? err.message : '获取数据失败'
       throw err
     } finally {
-      loading.value = false
+      if (isLoading) {
+        loading.value = false
+      }
     }
   }
 

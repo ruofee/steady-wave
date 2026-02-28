@@ -27,7 +27,7 @@ const todayProfitPercentage = computed(() => overviewStore.overview.yesterdayPro
       description="累计盈亏情况"
     />
     <StatCard
-      title="今日盈亏"
+      title="昨日盈亏"
       :amount="todayProfit"
       :percentage="todayProfitPercentage"
       description="今日交易盈亏"
