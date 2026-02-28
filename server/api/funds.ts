@@ -20,6 +20,23 @@ router.get('/', async (_req, res) => {
   }
 })
 
+// 查询总览数据
+router.get('/overview', async (_req, res) => {
+  try {
+    const db = await getDb()
+    res.json({
+      success: true,
+      data: db.data.overview,
+    })
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: '查询失败',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    })
+  }
+})
+
 // 新增基金
 router.post('/', async (req, res) => {
   try {

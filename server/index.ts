@@ -1,6 +1,8 @@
 import express from 'express'
 import cors from 'cors'
 import fundsRouter from './api/funds.js'
+import syncRouter from './api/sync.js'
+import dataRouter from './api/data.js'
 
 const app = express()
 const PORT = 3000
@@ -17,6 +19,8 @@ app.get('/api/health', (_req, res) => {
 
 // 挂载基金相关路由
 app.use('/api/funds', fundsRouter)
+app.use('/api/sync', syncRouter)
+app.use('/api/data', dataRouter)
 
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`)

@@ -3,18 +3,18 @@ import { onMounted } from 'vue'
 
 import Layout from './components/Layout/index.vue'
 
-import { useFundsStore } from './store'
+import { useDataStore } from './store'
 
-const fundsStore = useFundsStore()
+const dataStore = useDataStore()
 
 onMounted(() => {
-  fundsStore.fetchFunds()
+  dataStore.getData()
 })
 </script>
 
 <template>
   <Layout>
-    <div v-if="fundsStore.loading">Loading...</div>
+    <div v-if="dataStore.loading">Loading...</div>
     <RouterView v-else />
   </Layout>
 </template>

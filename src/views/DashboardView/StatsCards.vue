@@ -1,11 +1,16 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+import { useOverviewStore } from '@/store'
 import StatCard from '@/components/StatCard.vue'
 
-const totalPosition = 125680.50
-const totalProfit = 8560.30
-const totalProfitPercentage = 7.32
-const todayProfit = -1250.80
-const todayProfitPercentage = -0.99
+const overviewStore = useOverviewStore()
+
+const totalPosition = computed(() => overviewStore.overview.totalValue)
+const totalProfit = computed(() => overviewStore.overview.totalProfit)
+const totalProfitPercentage = computed(() => overviewStore.overview.totalProfitRate)
+const todayProfit = computed(() => overviewStore.overview.yesterdayProfit)
+const todayProfitPercentage = computed(() => overviewStore.overview.yesterdayProfitRate)
+
 </script>
 
 <template>

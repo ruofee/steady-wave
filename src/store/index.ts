@@ -1,1 +1,3 @@
 export { useFundsStore } from './funds'
+export { useOverviewStore } from './overview'
+export { useDataStore } from './data'

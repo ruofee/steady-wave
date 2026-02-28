@@ -5,17 +5,7 @@ import Card from '@/components/Card.vue'
 import ProfitIcon from '@/assets/icons/profit.svg?raw'
 import LossIcon from '@/assets/icons/loss.svg?raw'
 
-interface FundDisplay {
-  id: string
-  name: string
-  code: string
-  amount: number
-  yesterdayProfit: number
-  totalProfit: number
-  profitRate: number
-}
-
-type SortField = 'amount' | 'yesterdayProfit' | 'totalProfit'
+type SortField = 'totalCost' | 'yesterdayProfit' | 'totalProfit'
 type SortOrder = 'asc' | 'desc' | null
 
 const fundsStore = useFundsStore()
@@ -23,32 +13,12 @@ const fundsStore = useFundsStore()
 const sortField = ref<SortField | null>(null)
 const sortOrder = ref<SortOrder>(null)
 
-const fundsDisplay = computed<FundDisplay[]>(() => {
-  return fundsStore.funds.map(fund => {
-    const amount = fund.cost * fund.shares
-    // TODO: 后续需要从接口获取实时净值来计算收益
-    const yesterdayProfit = 0
-    const totalProfit = 0
-    const profitRate = 0
-
-    return {
-      id: fund.id,
-      name: fund.fundName,
-      code: fund.fundCode,
-      amount,
-      yesterdayProfit,
-      totalProfit,
-      profitRate,
-    }
-  })
-})
-
 const funds = computed(() => {
   if (!sortField.value || !sortOrder.value) {
-    return fundsDisplay.value
+    return fundsStore.funds
   }
 
-  return [...fundsDisplay.value].sort((a, b) => {
+  return [...fundsStore.funds].sort((a, b) => {
     const field = sortField.value!
     const order = sortOrder.value === 'asc' ? 1 : -1
     return (a[field] - b[field]) * order
@@ -77,6 +47,10 @@ const getSortIcon = (field: SortField) => {
 }
 
 const formatAmount = (amount: number) => {
+  if (!amount) {
+    return '0.00'
+  }
+
   return amount.toLocaleString('en-US', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
@@ -108,11 +82,11 @@ const handleAddFund = () => {
           <thead>
             <tr>
               <th>基金名称</th>
-              <th class="sortable" @click="handleSort('amount')">
+              <th class="sortable" @click="handleSort('totalCost')">
                 <span class="th-content">
                   金额
-                  <span class="sort-icon" :class="{ active: sortField === 'amount' }">
-                    {{ getSortIcon('amount') }}
+                  <span class="sort-icon" :class="{ active: sortField === 'totalCost' }">
+                    {{ getSortIcon('totalCost') }}
                   </span>
                 </span>
               </th>
@@ -137,12 +111,20 @@ const handleAddFund = () => {
           <tbody>
             <tr v-for="fund in funds" :key="fund.id">
               <td class="fund-name">
-                <div class="fund-name-text">{{ fund.name }}</div>
-                <div class="fund-code">{{ fund.code }}</div>
+                <div class="fund-name-text">{{ fund.fundName }}</div>
+                <div class="fund-code">{{ fund.fundCode }}</div>
               </td>
-              <td class="fund-amount">¥{{ formatAmount(fund.amount) }}</td>
-              <td :class="['fund-profit', getProfitClass(fund.yesterdayProfit)]">
-                {{ fund.yesterdayProfit >= 0 ? '+' : '' }}¥{{ formatAmount(fund.yesterdayProfit) }}
+              <td class="fund-amount">¥{{ formatAmount(fund.totalCost) }}</td>
+              <td class="fund-holding-profit">
+                <div class="fund-holding-profit-wrapper">
+                  <span :class="['fund-profit', getProfitClass(fund.yesterdayProfit)]">
+                    {{ fund.yesterdayProfit >= 0 ? '+' : '' }}¥{{ formatAmount(fund.yesterdayProfit) }}
+                  </span>
+                  <span class="fund-profit-tag" :class="getProfitClass(fund.yesterdayProfit)">
+                    <span class="fund-profit-icon" v-html="isProfit(fund.yesterdayProfit) ? ProfitIcon : LossIcon" />
+                    {{ fund.yesterdayProfitRate >= 0 ? '+' : '' }}{{ fund.yesterdayProfitRate.toFixed(2) }}%
+                  </span>
+                </div>
               </td>
               <td class="fund-holding-profit">
                 <div class="fund-holding-profit-wrapper">

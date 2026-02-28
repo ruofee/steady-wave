@@ -8,8 +8,25 @@ export interface Fund {
   fundCode: string
   cost: number
   shares: number
+  totalCost: number
+  totalProfit: number
+  profitRate: number
+  yesterdayProfit: number
+  yesterdayProfitRate: number
+  netAssetValue?: number
+  accumulatedValue?: number
+  netValueDate?: string
+  dayGrowthRate?: number
   createdAt: string
   updatedAt: string
+}
+
+export interface FundWithProfit extends Fund {
+  currentValue: number        // 当前市值
+  totalProfit: number         // 持有收益
+  profitRate: number          // 持有收益率(%)
+  yesterdayProfit: number     // 昨日收益
+  yesterdayProfitRate: number // 昨日收益率(%)
 }
 
 export const useFundsStore = defineStore('funds', () => {
@@ -62,21 +79,6 @@ export const useFundsStore = defineStore('funds', () => {
     }
   }
 
-  const generateMockData = async () => {
-    loading.value = true
-    error.value = null
-    try {
-      const response = await post<Fund[]>('/funds/mock')
-      funds.value = response.data || []
-      return response.data
-    } catch (err) {
-      error.value = err instanceof Error ? err.message : '生成测试数据失败'
-      throw err
-    } finally {
-      loading.value = false
-    }
-  }
-
   return {
     funds,
     loading,
@@ -84,6 +86,5 @@ export const useFundsStore = defineStore('funds', () => {
     fetchFunds,
     addFund,
     deleteFund,
-    generateMockData,
   }
 })
