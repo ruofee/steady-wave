@@ -1,0 +1,37 @@
+// 颜色变量定义
+
+// 主题色
+$color-primary: #3b82f6;
+$color-primary-hover: #2563eb;
+
+// 状态色
+$color-success: #059669;
+$color-success-light: #d1fae5;
+$color-danger: #ef4444;
+$color-danger-light: #fee2e2;
+
+// 灰色系
+$color-text-primary: #0f172a;
+$color-text-secondary: #475569;
+$color-text-tertiary: #64748b;
+
+// 边框和背景
+$color-border: #e2e8f0;
+$color-bg-light: #f8fafc;
+$color-bg-white: #ffffff;
+
+// 导出为 CSS 变量
+:root {
+  --color-primary: #{$color-primary};
+  --color-primary-hover: #{$color-primary-hover};
+  --color-success: #{$color-success};
+  --color-success-light: #{$color-success-light};
+  --color-danger: #{$color-danger};
+  --color-danger-light: #{$color-danger-light};
+  --color-text-primary: #{$color-text-primary};
+  --color-text-secondary: #{$color-text-secondary};
+  --color-text-tertiary: #{$color-text-tertiary};
+  --color-border: #{$color-border};
+  --color-bg-light: #{$color-bg-light};
+  --color-bg-white: #{$color-bg-white};
+}

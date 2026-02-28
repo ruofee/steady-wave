@@ -10,7 +10,7 @@ const router = createRouter({
     {
       path: '/dashboard',
       name: 'Dashboard',
-      component: () => import('../views/DashboardView.vue'),
+      component: () => import('../views/DashboardView/index.vue'),
     },
     {
       path: '/transparency',

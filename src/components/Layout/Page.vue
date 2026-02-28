@@ -24,15 +24,26 @@ const today = new Date().toLocaleDateString('en-US', {
 </template>
 
 <style lang="scss" scoped>
+$header-height: 116px;
+
 .page {
   display: flex;
   flex-direction: column;
   height: 100%;
+  padding-top: $header-height;
+  background-color: rgb(248, 249, 251);
 
   &-header {
+    position: fixed;
+    top: 0;
+    left: 80px;
+    right: 0;
     padding: 24px 32px;
-    border-bottom: 1px solid #e2e8f0;
-    background-color: #fff;
+    height: $header-height;
+    border-bottom: 1px solid var(--color-border);
+    background-color: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(6px);
+    box-sizing: border-box;
   }
 
   &-title {
@@ -46,12 +57,13 @@ const today = new Date().toLocaleDateString('en-US', {
     display: block;
     margin-top: 4px;
     font-size: 1rem;
-    color: #94a3b8;
+    color: var(--color-text-tertiary);
   }
 
   &-container {
     flex: 1;
     padding: 24px;
+    background-color: rgb(248, 249, 251);
   }
 }
 </style>
