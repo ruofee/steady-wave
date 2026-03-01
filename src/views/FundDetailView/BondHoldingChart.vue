@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, computed } from 'vue'
 import * as echarts from 'echarts'
 import Card from '@/components/Card.vue'
 
@@ -13,11 +13,21 @@ interface BondHolding {
 
 interface Props {
   bondHoldings: BondHolding[]
+  totalRatio?: number  // 债券总占比,从 assetAllocation 传入
 }
 
 const props = defineProps<Props>()
 const chartRef = ref<HTMLDivElement>()
 let chartInstance: echarts.ECharts | null = null
+
+// 使用传入的总占比,如果没有则计算
+const totalBondRatio = computed(() => {
+  return props.totalRatio ?? props.bondHoldings.reduce((sum, bond) => sum + bond.holdRatio, 0)
+})
+
+const cardTitle = computed(() => {
+  return `重仓债券 (${totalBondRatio.value.toFixed(2)}%)`
+})
 
 const initChart = () => {
   if (!chartRef.value) return
@@ -122,7 +132,7 @@ watch(() => props.bondHoldings, () => {
 </script>
 
 <template>
-  <Card title="重仓债券">
+  <Card :title="cardTitle">
     <div ref="chartRef" class="chart"></div>
   </Card>
 </template>

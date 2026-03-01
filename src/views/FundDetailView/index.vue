@@ -263,11 +263,13 @@ onMounted(() => {
           <StockHoldingChart 
             v-if="holdingInfo.stockHoldings.length > 0"
             :stock-holdings="holdingInfo.stockHoldings"
+            :total-ratio="holdingInfo.assetAllocation.stocks"
           />
           
           <BondHoldingChart 
             v-if="holdingInfo.bondHoldings.length > 0"
             :bond-holdings="holdingInfo.bondHoldings"
+            :total-ratio="holdingInfo.assetAllocation.bonds"
           />
 
           <div v-if="holdingInfo.stockHoldings.length === 0 && holdingInfo.bondHoldings.length === 0" class="empty">
