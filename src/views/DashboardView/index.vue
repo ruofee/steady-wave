@@ -11,7 +11,8 @@ import AssetAllocation from './AssetAllocation.vue'
       <StatsCards />
       <div class="dashboard-content">
         <FundsPosition />
-        <AssetAllocation />
+        <!-- <FundsPosition />
+        <AssetAllocation /> -->
       </div>
     </template>
   </Page>
@@ -19,18 +20,18 @@ import AssetAllocation from './AssetAllocation.vue'
 
 <style lang="scss" scoped>
 .dashboard-content {
-  display: grid;
-  grid-template-columns: minmax(300px, 60%) 1fr;
-  gap: 24px;
+  // display: grid;
+  // grid-template-columns: minmax(300px, 60%) 1fr;
+  // gap: 24px;
   margin-top: 24px;
 
-  @media (max-width: 768px) {
-    grid-template-columns: 1fr;
-  }
+  // @media (max-width: 768px) {
+  //   grid-template-columns: 1fr;
+  // }
 
-  @media (min-width: 769px) and (max-width: 1200px) {
-    grid-template-columns: minmax(300px, 1fr);
-  }
+  // @media (min-width: 769px) and (max-width: 1200px) {
+  //   grid-template-columns: minmax(300px, 1fr);
+  // }
 }
 
 @container (max-width: 500px) {

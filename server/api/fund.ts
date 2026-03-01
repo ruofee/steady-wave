@@ -3,6 +3,7 @@ import { randomUUID } from 'crypto'
 import { getDb } from '../db.js'
 import { searchFunds } from '../external/fundSearch.js'
 import { fetchFundInfo } from '../external/fund.js'
+import { fetchFundHolding } from '../external/fundHolding.js'
 import { updateOverview, calculateFundProfit } from './data.js'
 
 const router = Router()
@@ -166,6 +167,34 @@ router.put('/:fundCode', async (req, res) => {
     res.status(500).json({
       success: false,
       message: '修改基金失败',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    })
+  }
+})
+
+// 获取基金持仓
+router.get('/:fundCode/holding', async (req, res) => {
+  try {
+    const { fundCode } = req.params
+    
+    if (!fundCode) {
+      res.status(400).json({
+        success: false,
+        message: '缺少基金代码',
+      })
+      return
+    }
+    
+    const holdingInfo = await fetchFundHolding(fundCode)
+    
+    res.json({ 
+      success: true, 
+      data: holdingInfo,
+    })
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: '获取基金持仓失败',
       error: error instanceof Error ? error.message : 'Unknown error',
     })
   }

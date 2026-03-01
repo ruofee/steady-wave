@@ -13,6 +13,11 @@ const router = createRouter({
       component: () => import('../views/DashboardView/index.vue'),
     },
     {
+      path: '/fund/:code',
+      name: 'FundDetail',
+      component: () => import('../views/FundDetailView.vue'),
+    },
+    {
       path: '/transparency',
       name: 'Transparency',
       component: () => import('../views/TransparencyView.vue'),

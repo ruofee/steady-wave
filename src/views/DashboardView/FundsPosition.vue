@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { useFundsStore, useFundDrawerStore } from '@/store'
 import type { Fund } from '@/store/funds'
 import Card from '@/components/Card.vue'
@@ -9,6 +10,7 @@ import LossIcon from '@/assets/icons/loss.svg?raw'
 type SortField = 'totalCost' | 'yesterdayProfit' | 'totalProfit'
 type SortOrder = 'asc' | 'desc' | null
 
+const router = useRouter()
 const fundsStore = useFundsStore()
 const fundDrawerStore = useFundDrawerStore()
 
@@ -72,6 +74,10 @@ const handleAddFund = () => {
 const handleEditFund = (fund: Fund) => {
   fundDrawerStore.open(fund)
 }
+
+const handleViewDetail = (fundCode: string) => {
+  router.push(`/fund/${fundCode}`)
+}
 </script>
 
 <template>
@@ -118,7 +124,7 @@ const handleEditFund = (fund: Fund) => {
             <tr v-for="fund in funds" :key="fund.id">
               <td class="fund-name">
                 <div class="fund-name-content">
-                  <div class="fund-name-info">
+                  <div class="fund-name-info" @click="handleViewDetail(fund.fundCode)">
                     <div class="fund-name-text">{{ fund.fundName }}</div>
                     <div class="fund-code">{{ fund.fundCode }}</div>
                   </div>
@@ -267,6 +273,16 @@ const handleEditFund = (fund: Fund) => {
   &-info {
     flex: 1;
     min-width: 0;
+    cursor: pointer;
+    transition: color 0.2s;
+
+    &:hover {
+      color: var(--color-primary);
+    }
+
+    &:hover .fund-name-text {
+      text-decoration: underline;
+    }
   }
 
   &-text {
@@ -322,9 +338,8 @@ tbody tr:hover .fund-edit-btn {
 .fund-holding-profit {
   &-wrapper {
     display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 6px;
+    align-items: center;
+    gap: 12px;
   }
 }
 
