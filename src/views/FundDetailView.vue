@@ -14,11 +14,28 @@ interface StockHolding {
   updateDate: string
 }
 
+interface BondHolding {
+  bondCode: string
+  bondName: string
+  holdRatio: number
+  holdValue: number
+  updateDate: string
+}
+
+interface AssetAllocation {
+  stocks: number
+  bonds: number
+  cash: number
+  other: number
+  updateDate: string
+}
+
 interface FundHoldingInfo {
   fundCode: string
   fundName: string
+  assetAllocation: AssetAllocation
   stockHoldings: StockHolding[]
-  totalStockRatio: number
+  bondHoldings: BondHolding[]
   updateDate: string
 }
 
@@ -76,14 +93,24 @@ onMounted(() => {
               <span class="value">{{ holdingInfo.updateDate }}</span>
             </div>
             <div class="info-item">
-              <span class="label">前十重仓总占比</span>
-              <span class="value">{{ holdingInfo.totalStockRatio.toFixed(2) }}%</span>
+              <span class="label">股票仓位</span>
+              <span class="value">{{ holdingInfo.assetAllocation.stocks.toFixed(2) }}%</span>
+            </div>
+            <div class="info-item">
+              <span class="label">债券仓位</span>
+              <span class="value">{{ holdingInfo.assetAllocation.bonds.toFixed(2) }}%</span>
+            </div>
+            <div class="info-item">
+              <span class="label">现金占比</span>
+              <span class="value">{{ holdingInfo.assetAllocation.cash.toFixed(2) }}%</span>
             </div>
           </div>
           
           <FundHoldingChart 
-            v-if="holdingInfo.stockHoldings.length > 0"
-            :holdings="holdingInfo.stockHoldings"
+            v-if="holdingInfo.stockHoldings.length > 0 || holdingInfo.bondHoldings.length > 0"
+            :stock-holdings="holdingInfo.stockHoldings"
+            :bond-holdings="holdingInfo.bondHoldings"
+            :asset-allocation="holdingInfo.assetAllocation"
           />
           
           <div v-else class="empty">
@@ -168,11 +195,12 @@ onMounted(() => {
 
 .fund-info {
   display: flex;
-  gap: 32px;
+  gap: 24px;
   padding: 20px 24px;
   background: var(--color-bg-white);
   border-radius: 12px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  flex-wrap: wrap;
   
   @media (max-width: 768px) {
     flex-direction: column;

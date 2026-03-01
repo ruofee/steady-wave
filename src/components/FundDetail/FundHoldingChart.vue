@@ -11,8 +11,26 @@ interface StockHolding {
   updateDate: string
 }
 
+interface BondHolding {
+  bondCode: string
+  bondName: string
+  holdRatio: number
+  holdValue: number
+  updateDate: string
+}
+
+interface AssetAllocation {
+  stocks: number
+  bonds: number
+  cash: number
+  other: number
+  updateDate: string
+}
+
 interface Props {
-  holdings: StockHolding[]
+  stockHoldings: StockHolding[]
+  bondHoldings: BondHolding[]
+  assetAllocation: AssetAllocation
 }
 
 const props = defineProps<Props>()
@@ -21,7 +39,7 @@ const chartRef = ref<HTMLDivElement>()
 let chartInstance: echarts.ECharts | null = null
 
 const initChart = () => {
-  if (!chartRef.value || !props.holdings.length) return
+  if (!chartRef.value) return
   
   if (chartInstance) {
     chartInstance.dispose()
@@ -29,29 +47,134 @@ const initChart = () => {
   
   chartInstance = echarts.init(chartRef.value)
   
-  // 准备树图数据
-  const treeData = {
-    name: '持仓占比',
-    children: props.holdings.map(holding => ({
+  // 准备树图数据 - 完整的资产配置结构
+  const children: any[] = []
+  
+  // 股票资产
+  if (props.assetAllocation.stocks > 0) {
+    const stockChildren = props.stockHoldings.map(holding => ({
       name: holding.stockName,
       value: holding.holdRatio,
       stockCode: holding.stockCode,
       holdShares: holding.holdShares,
       holdValue: holding.holdValue,
+      type: 'stock',
     }))
+    
+    // 其他未列出的股票
+    const listedStockRatio = props.stockHoldings.reduce((sum, h) => sum + h.holdRatio, 0)
+    const otherStockRatio = props.assetAllocation.stocks - listedStockRatio
+    
+    if (otherStockRatio > 0.01) {
+      stockChildren.push({
+        name: '其他股票',
+        value: otherStockRatio,
+        type: 'stock-other',
+      })
+    }
+    
+    if (stockChildren.length > 0) {
+      children.push({
+        name: `股票 ${props.assetAllocation.stocks.toFixed(2)}%`,
+        value: props.assetAllocation.stocks,
+        children: stockChildren,
+        itemStyle: {
+          color: '#5470c6',
+        },
+      })
+    }
+  }
+  
+  // 债券资产
+  if (props.assetAllocation.bonds > 0) {
+    const bondChildren = props.bondHoldings.map(holding => ({
+      name: holding.bondName,
+      value: holding.holdRatio,
+      bondCode: holding.bondCode,
+      holdValue: holding.holdValue,
+      type: 'bond',
+    }))
+    
+    // 其他未列出的债券
+    const listedBondRatio = props.bondHoldings.reduce((sum, h) => sum + h.holdRatio, 0)
+    const otherBondRatio = props.assetAllocation.bonds - listedBondRatio
+    
+    if (otherBondRatio > 0.01) {
+      bondChildren.push({
+        name: '其他债券',
+        value: otherBondRatio,
+        type: 'bond-other',
+      })
+    }
+    
+    if (bondChildren.length > 0) {
+      children.push({
+        name: `债券 ${props.assetAllocation.bonds.toFixed(2)}%`,
+        value: props.assetAllocation.bonds,
+        children: bondChildren,
+        itemStyle: {
+          color: '#91cc75',
+        },
+      })
+    }
+  }
+  
+  // 现金资产
+  if (props.assetAllocation.cash > 0) {
+    children.push({
+      name: `现金 ${props.assetAllocation.cash.toFixed(2)}%`,
+      value: props.assetAllocation.cash,
+      type: 'cash',
+      itemStyle: {
+        color: '#fac858',
+      },
+    })
+  }
+  
+  // 其他资产
+  if (props.assetAllocation.other > 0) {
+    children.push({
+      name: `其他 ${props.assetAllocation.other.toFixed(2)}%`,
+      value: props.assetAllocation.other,
+      type: 'other',
+      itemStyle: {
+        color: '#ee6666',
+      },
+    })
+  }
+  
+  const treeData = {
+    name: '资产配置',
+    children,
   }
   
   const option: echarts.EChartsOption = {
     tooltip: {
       trigger: 'item',
       formatter: (params: any) => {
-        if (params.data.stockCode) {
+        const data = params.data
+        if (data.type === 'stock') {
           return `
             <div style="padding: 4px 0;">
-              <div style="font-weight: 600; margin-bottom: 6px;">${params.data.name} (${params.data.stockCode})</div>
-              <div style="color: #666;">占净值比例: <span style="font-weight: 600;">${params.data.value.toFixed(2)}%</span></div>
-              <div style="color: #666;">持股数: <span style="font-weight: 600;">${params.data.holdShares.toFixed(2)}万股</span></div>
-              <div style="color: #666;">持仓市值: <span style="font-weight: 600;">${params.data.holdValue.toFixed(2)}万元</span></div>
+              <div style="font-weight: 600; margin-bottom: 6px;">${data.name} (${data.stockCode})</div>
+              <div style="color: #666;">占净值比例: <span style="font-weight: 600;">${data.value.toFixed(2)}%</span></div>
+              <div style="color: #666;">持股数: <span style="font-weight: 600;">${data.holdShares.toFixed(2)}万股</span></div>
+              <div style="color: #666;">持仓市值: <span style="font-weight: 600;">${data.holdValue.toFixed(2)}万元</span></div>
+            </div>
+          `
+        } else if (data.type === 'bond') {
+          return `
+            <div style="padding: 4px 0;">
+              <div style="font-weight: 600; margin-bottom: 6px;">${data.name} (${data.bondCode})</div>
+              <div style="color: #666;">占净值比例: <span style="font-weight: 600;">${data.value.toFixed(2)}%</span></div>
+              <div style="color: #666;">持仓市值: <span style="font-weight: 600;">${data.holdValue.toFixed(2)}万元</span></div>
+            </div>
+          `
+        } else if (data.value !== undefined) {
+          return `
+            <div style="padding: 4px 0;">
+              <div style="font-weight: 600; margin-bottom: 6px;">${data.name}</div>
+              <div style="color: #666;">占比: <span style="font-weight: 600;">${data.value.toFixed(2)}%</span></div>
             </div>
           `
         }
@@ -77,7 +200,7 @@ const initChart = () => {
         label: {
           show: true,
           formatter: (params: any) => {
-            if (params.data.stockCode) {
+            if (params.data.value !== undefined && params.data.name) {
               return `{name|${params.data.name}}\n{ratio|${params.data.value.toFixed(2)}%}`
             }
             return ''
@@ -134,22 +257,24 @@ const initChart = () => {
               align: 'center',
             },
           },
+          {
+            colorSaturation: [0.3, 0.6],
+            itemStyle: {
+              borderWidth: 0,
+              gapWidth: 1,
+              borderColor: 'transparent',
+            },
+            label: {
+              position: 'inside',
+              verticalAlign: 'middle',
+              align: 'center',
+              fontSize: 12,
+            },
+          },
         ],
         visualMin: 0,
-        visualMax: Math.max(...props.holdings.map(h => h.holdRatio)),
+        visualMax: 100,
         colorAlpha: [0.6, 1],
-        color: [
-          '#5470c6',
-          '#91cc75',
-          '#fac858',
-          '#ee6666',
-          '#73c0de',
-          '#3ba272',
-          '#fc8452',
-          '#9a60b4',
-          '#ea7ccc',
-          '#5e9cd3',
-        ],
       },
     ],
   }
@@ -171,7 +296,7 @@ onUnmounted(() => {
   chartInstance?.dispose()
 })
 
-watch(() => props.holdings, () => {
+watch(() => [props.stockHoldings, props.bondHoldings, props.assetAllocation], () => {
   initChart()
 }, { deep: true })
 </script>
@@ -179,8 +304,8 @@ watch(() => props.holdings, () => {
 <template>
   <div class="fund-holding-chart">
     <div class="chart-header">
-      <h3 class="chart-title">持仓比例分布</h3>
-      <p class="chart-desc">前十大重仓股</p>
+      <h3 class="chart-title">资产配置分布</h3>
+      <p class="chart-desc">股票、债券、现金及其他资产</p>
     </div>
     <div ref="chartRef" class="chart-container"></div>
   </div>

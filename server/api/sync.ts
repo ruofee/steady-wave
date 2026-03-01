@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { getDb, type Overview } from '../db.js'
-import { fetchFundInfo } from '../external/fund.js'
+import { fetchFundBasicInfo } from '../external/fundApi.js'
 
 const router = Router()
 
@@ -90,10 +90,21 @@ router.post('/:fundCode', async (req, res) => {
       return
     }
 
-    const fundInfo = await fetchFundInfo(fundCode)
+    const response = await fetchFundBasicInfo(fundCode)
+    
+    if (!response.Datas) {
+      res.status(500).json({
+        success: false,
+        message: '无法获取基金信息',
+      })
+      return
+    }
+    
+    const fundInfo = response.Datas
+    const updateDate = fundInfo.FSRQ || fundInfo.ESTABDATE || ''
 
     // 如果净值日期没有变化,不需要更新
-    if (fund.netValueDate === fundInfo.updateDate) {
+    if (fund.netValueDate === updateDate) {
       const fundWithProfit = calculateFundProfit(fund)
       
       res.json({
@@ -107,10 +118,10 @@ router.post('/:fundCode', async (req, res) => {
       return
     }
 
-    fund.netAssetValue = fundInfo.netAssetValue
-    fund.accumulatedValue = fundInfo.accumulatedValue
-    fund.netValueDate = fundInfo.updateDate
-    fund.dayGrowthRate = fundInfo.dayGrowthRate
+    fund.netAssetValue = parseFloat(fundInfo.DWJZ || '0')
+    fund.accumulatedValue = parseFloat(fundInfo.LJJZ || '0')
+    fund.netValueDate = updateDate
+    fund.dayGrowthRate = parseFloat(fundInfo.RZDF || '0')
     fund.updatedAt = new Date().toISOString()
 
     // 更新总览数据
@@ -154,17 +165,29 @@ router.post('/', async (_req, res) => {
 
     const updatePromises = db.data.funds.map(async (fund) => {
       try {
-        const fundInfo = await fetchFundInfo(fund.fundCode)
+        const response = await fetchFundBasicInfo(fund.fundCode)
+        
+        if (!response.Datas) {
+          return { 
+            success: false, 
+            fundCode: fund.fundCode, 
+            skipped: false, 
+            reason: '无法获取基金信息' 
+          }
+        }
+        
+        const fundInfo = response.Datas
+        const updateDate = fundInfo.FSRQ || fundInfo.ESTABDATE || ''
         
         // 如果净值日期没有变化,跳过更新
-        if (fund.netValueDate === fundInfo.updateDate) {
+        if (fund.netValueDate === updateDate) {
           return { success: true, fundCode: fund.fundCode, skipped: true, reason: '净值未更新' }
         }
         
-        fund.netAssetValue = fundInfo.netAssetValue
-        fund.accumulatedValue = fundInfo.accumulatedValue
-        fund.netValueDate = fundInfo.updateDate
-        fund.dayGrowthRate = fundInfo.dayGrowthRate
+        fund.netAssetValue = parseFloat(fundInfo.DWJZ || '0')
+        fund.accumulatedValue = parseFloat(fundInfo.LJJZ || '0')
+        fund.netValueDate = updateDate
+        fund.dayGrowthRate = parseFloat(fundInfo.RZDF || '0')
         fund.updatedAt = new Date().toISOString()
         return { success: true, fundCode: fund.fundCode, skipped: false }
       } catch (error) {

@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { Low } from 'lowdb'
 import { getDb, Database, Fund } from '../db.js'
-import { fetchFundInfo } from '../external/fund.js'
+import { fetchFundBasicInfo } from '../external/fundApi.js'
 import { add, subtract, multiply, divide } from '../utils/math.js'
 
 const router = Router()
@@ -132,23 +132,35 @@ router.get('/', async (req, res) => {
       
       // 确定期望的净值日期
       const expectedDate = currentHour < 15 ? yesterdayStr : today
-      
+
       // 强制更新:所有基金  智能更新:只更新不符合预期的基金
       const fundsToUpdate = forceUpdate 
         ? db.data.funds
         : db.data.funds.filter(fund => !fund.netValueDate || fund.netValueDate !== expectedDate)
-      
+
       if (fundsToUpdate.length > 0) {
         const updatePromises = fundsToUpdate.map(async (fund) => {
           try {
-            const fundInfo = await fetchFundInfo(fund.fundCode)
+            const response = await fetchFundBasicInfo(fund.fundCode)
             
+            if (!response.Datas) {
+              return { 
+                success: false, 
+                updated: false, 
+                fundCode: fund.fundCode,
+                error: 'No fund data found'
+              }
+            }
+            
+            const fundInfo = response.Datas
+            const updateDate = fundInfo.FSRQ || fundInfo.ESTABDATE || ''
+
             // 只在净值日期变化时更新
-            if (fund.netValueDate !== fundInfo.updateDate) {
-              fund.netAssetValue = fundInfo.netAssetValue
-              fund.accumulatedValue = fundInfo.accumulatedValue
-              fund.netValueDate = fundInfo.updateDate
-              fund.dayGrowthRate = fundInfo.dayGrowthRate
+            if (fund.netValueDate !== updateDate) {
+              fund.netAssetValue = parseFloat(fundInfo.DWJZ || '0')
+              fund.accumulatedValue = parseFloat(fundInfo.LJJZ || '0')
+              fund.netValueDate = updateDate
+              fund.dayGrowthRate = parseFloat(fundInfo.RZDF || '0')
               fund.updatedAt = new Date().toISOString()
               return { success: true, updated: true, fundCode: fund.fundCode }
             }
@@ -156,7 +168,7 @@ router.get('/', async (req, res) => {
           } catch (error) {
             return { 
               success: false, 
-              updated: false, 
+              updated: false,
               fundCode: fund.fundCode,
               error: error instanceof Error ? error.message : 'Unknown error'
             }

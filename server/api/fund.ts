@@ -1,8 +1,7 @@
 import { Router } from 'express'
 import { randomUUID } from 'crypto'
 import { getDb } from '../db.js'
-import { searchFunds } from '../external/fundSearch.js'
-import { fetchFundInfo } from '../external/fund.js'
+import { searchFunds, fetchFundBasicInfo } from '../external/fundApi.js'
 import { fetchFundHolding } from '../external/fundHolding.js'
 import { updateOverview, calculateFundProfit } from './data.js'
 
@@ -86,11 +85,14 @@ router.post('/', async (req, res) => {
     }
     
     try {
-      const info = await fetchFundInfo(fund.fundCode)
-      fund.netAssetValue = info.netAssetValue
-      fund.accumulatedValue = info.accumulatedValue
-      fund.netValueDate = info.updateDate
-      fund.dayGrowthRate = info.dayGrowthRate
+      const response = await fetchFundBasicInfo(fund.fundCode)
+      if (response.Datas) {
+        const info = response.Datas
+        fund.netAssetValue = parseFloat(info.DWJZ || '0')
+        fund.accumulatedValue = parseFloat(info.LJJZ || '0')
+        fund.netValueDate = info.FSRQ || info.ESTABDATE || ''
+        fund.dayGrowthRate = parseFloat(info.RZDF || '0')
+      }
     } catch {
       // 忽略净值拉取失败，仅保存成本与份额
     }
