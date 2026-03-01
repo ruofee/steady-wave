@@ -1,11 +1,18 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
+
 import Page from '@/components/Layout/Page.vue'
+import Card from '@/components/Card.vue'
 import AssetAllocationChart from './AssetAllocationChart.vue'
 import StockHoldingChart from './StockHoldingChart.vue'
 import BondHoldingChart from './BondHoldingChart.vue'
+import SectorAllocationChart from './SectorAllocationChart.vue'
+import NetDiagramChart from './NetDiagramChart.vue'
+
 import { get } from '@/packages/request'
+
+import backIcon from '@/assets/icons/back.svg'
 
 interface StockHolding {
   stockCode: string
@@ -41,12 +48,51 @@ interface FundHoldingInfo {
   updateDate: string
 }
 
+interface SectorAllocation {
+  industryName: string
+  ratio: number
+  date: string
+  marketValue: number
+}
+
+interface FundBasicInfo {
+  fundCode: string
+  fundName: string
+  fundType: string
+  fundFeature: string
+  riskLevel: string
+  unitNav: number
+  accumulatedNav: number
+  dailyGrowth: number
+  rate: string
+  sourceRate: string
+  subscribeStatus: string
+  redeemStatus: string
+  minSubscribe: string
+  fundCompany: string
+  fundCompanyId: string
+  establishDate: string
+  indexCode: string
+  indexName: string
+  rating: string
+  sharp1: string
+  sharp2: string
+  sharp3: string
+  maxDrawdown: string
+  description: string
+  benchmark: string
+  investmentIdea: string
+}
+
+const router = useRouter()
 const route = useRoute()
 const fundCode = computed(() => route.params.code as string)
 
 const loading = ref(false)
 const error = ref('')
 const holdingInfo = ref<FundHoldingInfo | null>(null)
+const sectorAllocations = ref<SectorAllocation[]>([])
+const basicInfo = ref<FundBasicInfo | null>(null)
 
 const fetchHolding = async () => {
   if (!fundCode.value) return
@@ -55,9 +101,15 @@ const fetchHolding = async () => {
   error.value = ''
   
   try {
-    const res = await get<FundHoldingInfo>(`/funds/${fundCode.value}/holding`)
-    holdingInfo.value = res.data || null
-    console.log('holdingInfo', holdingInfo.value)
+    const [holdingRes, sectorRes, basicRes] = await Promise.all([
+      get<FundHoldingInfo>(`/funds/${fundCode.value}/holding`),
+      get<SectorAllocation[]>(`/funds/${fundCode.value}/sector`).catch(() => ({ data: [] })),
+      get<FundBasicInfo>(`/funds/${fundCode.value}/info`),
+    ])
+    
+    holdingInfo.value = holdingRes.data || null
+    sectorAllocations.value = sectorRes.data || []
+    basicInfo.value = basicRes.data || null
   } catch (e) {
     error.value = e instanceof Error ? e.message : '获取持仓数据失败'
     console.error('Failed to fetch fund holding:', e)
@@ -72,8 +124,15 @@ onMounted(() => {
 </script>
 
 <template>
-  <Page :title="holdingInfo?.fundName || `基金详情 - ${fundCode}`">
+  <Page title="基金详情">
     <template #container>
+      <div>
+        <button class="back-btn" @click="router.back()">
+          <img :src="backIcon" alt="back" class="back-icon" />
+          <span class="back-btn-text">返回上一页</span>
+        </button>
+      </div>
+
       <div class="fund-detail">
         <div v-if="loading" class="loading">
           <div class="loading-spinner"></div>
@@ -85,40 +144,88 @@ onMounted(() => {
           <button class="retry-btn" @click="fetchHolding">重试</button>
         </div>
         
-        <div v-else-if="holdingInfo" class="fund-content">
-          <div class="fund-info">
-            <div class="info-item">
-              <span class="label">基金名称</span>
-              <span class="value">{{ holdingInfo.fundName }}</span>
+        <div v-else-if="holdingInfo && basicInfo" class="fund-content">
+          <Card>
+            <div class="fund-info">
+              <div class="fund-info-item">
+                <div class="info-item">
+                  <span class="label">基金名称</span>
+                  <span class="value">{{ basicInfo.fundName }}</span>
+                </div>
+                <div class="info-item">
+                  <span class="label">基金代码</span>
+                  <span class="value">{{ basicInfo.fundCode }}</span>
+                </div>
+                <div class="info-item">
+                  <span class="label">基金类型</span>
+                  <span class="value">{{ basicInfo.fundType }}</span>
+                </div>
+                <div class="info-item">
+                  <span class="label">风险等级</span>
+                  <span class="value">{{ basicInfo.riskLevel }}</span>
+                </div>
+              </div>
             </div>
-            <div class="info-item">
-              <span class="label">基金代码</span>
-              <span class="value">{{ holdingInfo.fundCode }}</span>
+          </Card>
+
+          <Card>
+            <div class="fund-info">
+              <div class="fund-info-item">
+                <div class="info-item">
+                  <span class="label">单位净值</span>
+                  <span class="value">{{ basicInfo.unitNav.toFixed(4) }}</span>
+                </div>
+                <div class="info-item">
+                  <span class="label">累计净值</span>
+                  <span class="value">{{ basicInfo.accumulatedNav.toFixed(4) }}</span>
+                </div>
+                <div class="info-item">
+                  <span class="label">日涨跌幅</span>
+                  <span class="value" :class="{ 'growth-positive': basicInfo.dailyGrowth > 0, 'growth-negative': basicInfo.dailyGrowth < 0 }">
+                    {{ basicInfo.dailyGrowth > 0 ? '+' : '' }}{{ basicInfo.dailyGrowth.toFixed(2) }}%
+                  </span>
+                </div>
+                <div class="info-item">
+                  <span class="label">基金公司</span>
+                  <span class="value">{{ basicInfo.fundCompany }}</span>
+                </div>
+                <div class="info-item">
+                  <span class="label">成立日期</span>
+                  <span class="value">{{ basicInfo.establishDate }}</span>
+                </div>
+                <div class="info-item">
+                  <span class="label">数据更新日期</span>
+                  <span class="value">{{ holdingInfo.updateDate }}</span>
+                </div>
+              </div>
             </div>
-            <div class="info-item">
-              <span class="label">数据更新日期</span>
-              <span class="value">{{ holdingInfo.updateDate }}</span>
-            </div>
-          </div>
+          </Card>
+          
+          <NetDiagramChart :fund-code="fundCode" />
           
           <div class="charts-grid">
             <AssetAllocationChart 
               :asset-allocation="holdingInfo.assetAllocation"
             />
             
-            <StockHoldingChart 
-              v-if="holdingInfo.stockHoldings.length > 0"
-              :stock-holdings="holdingInfo.stockHoldings"
+            <SectorAllocationChart 
+              v-if="sectorAllocations.length > 0"
+              :sector-allocations="sectorAllocations"
             />
-            
-            <BondHoldingChart 
-              v-if="holdingInfo.bondHoldings.length > 0"
-              :bond-holdings="holdingInfo.bondHoldings"
-            />
-            
-            <div v-if="holdingInfo.stockHoldings.length === 0 && holdingInfo.bondHoldings.length === 0" class="empty">
-              <p>暂无持仓数据</p>
-            </div>
+          </div>
+          
+          <StockHoldingChart 
+            v-if="holdingInfo.stockHoldings.length > 0"
+            :stock-holdings="holdingInfo.stockHoldings"
+          />
+          
+          <BondHoldingChart 
+            v-if="holdingInfo.bondHoldings.length > 0"
+            :bond-holdings="holdingInfo.bondHoldings"
+          />
+
+          <div v-if="holdingInfo.stockHoldings.length === 0 && holdingInfo.bondHoldings.length === 0" class="empty">
+            <p>暂无持仓数据</p>
           </div>
         </div>
       </div>
@@ -127,6 +234,33 @@ onMounted(() => {
 </template>
 
 <style lang="scss" scoped>
+.back-btn {
+  display: flex;
+  align-items: center;
+  column-gap: 8px;
+  padding: 0;
+  margin-bottom: 18px;
+  border: none;
+
+  .back-icon {
+    width: 16px;
+    height: 16px;
+  }
+
+  &-text {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    transition: color 0.2s;
+  }
+
+  &:hover {
+    .back-btn-text {
+      color: var(--color-primary);
+    }
+  }
+}
+
 .fund-detail {
   max-width: 1400px;
   margin: 0 auto;
@@ -199,7 +333,7 @@ onMounted(() => {
 
 .charts-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(600px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 24px;
   
   @media (min-width: 768px) {
@@ -209,12 +343,14 @@ onMounted(() => {
 
 .fund-info {
   display: flex;
-  gap: 24px;
-  padding: 20px 24px;
-  background: var(--color-bg-white);
-  border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-  flex-wrap: wrap;
+  flex-direction: column;
+  row-gap: 24px;
+
+  .fund-info-item {
+    display: flex;
+    flex-direction: row;
+    column-gap: 44px;
+  }
   
   @media (max-width: 768px) {
     flex-direction: column;
@@ -236,6 +372,14 @@ onMounted(() => {
     font-size: 1.125rem;
     font-weight: 600;
     color: var(--color-text-primary);
+  }
+  
+  .growth-positive {
+    color: #e74c3c;
+  }
+  
+  .growth-negative {
+    color: #27ae60;
   }
 }
 

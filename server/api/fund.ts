@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { randomUUID } from 'crypto'
 import { getDb } from '../db.js'
-import { searchFunds, fetchFundBasicInfo, fetchFundAssetAllocation, fetchFundPosition } from '../external/fundApi.js'
+import { searchFunds, fetchFundBasicInfo, fetchFundAssetAllocation, fetchFundPosition, fetchFundSectorAllocation, fetchFundNetDiagram } from '../external/fundApi.js'
 import { fetchFundHolding } from '../external/fundHolding.js'
 import { updateOverview, calculateFundProfit } from './data.js'
 
@@ -240,6 +240,159 @@ router.get('/:fundCode/holding', async (req, res) => {
     res.status(500).json({
       success: false,
       message: '获取基金持仓失败',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    })
+  }
+})
+
+// 获取基金行业配比
+router.get('/:fundCode/sector', async (req, res) => {
+  try {
+    const { fundCode } = req.params
+    
+    if (!fundCode) {
+      res.status(400).json({
+        success: false,
+        message: '缺少基金代码',
+      })
+      return
+    }
+    
+    const sectorResult = await fetchFundSectorAllocation(fundCode)
+
+    const sectorData = (sectorResult.Datas || [])
+      .map(sector => ({
+        industryName: sector.HYMC,
+        ratio: parseFloat(sector.ZJZBL || '0'),
+        date: sector.FSRQ,
+        marketValue: parseFloat(sector.SZ || '0'),
+      }))
+      .filter(sector => sector.industryName !== '合计')
+    
+    res.json({ 
+      success: true, 
+      data: sectorData,
+    })
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: '获取基金行业配比失败',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    })
+  }
+})
+
+// 获取基金基本信息
+router.get('/:fundCode/info', async (req, res) => {
+  try {
+    const { fundCode } = req.params
+    
+    if (!fundCode) {
+      res.status(400).json({
+        success: false,
+        message: '缺少基金代码',
+      })
+      return
+    }
+    
+    const result = await fetchFundBasicInfo(fundCode)
+    const basicInfo = result.Datas
+    
+    // 转换为前端友好的格式,只返回常用字段
+    const formattedInfo = {
+      fundCode: basicInfo.FCODE,
+      fundName: basicInfo.SHORTNAME,
+      fundType: basicInfo.FUNDTYPE,
+      fundFeature: basicInfo.FEATURE,
+      riskLevel: basicInfo.RISKLEVEL,
+      
+      // 净值信息
+      unitNav: parseFloat(basicInfo.DWJZ || '0'),
+      accumulatedNav: parseFloat(basicInfo.LJJZ || '0'),
+      dailyGrowth: parseFloat(basicInfo.RZDF || '0'),
+      
+      // 费率信息
+      rate: basicInfo.RATE,
+      sourceRate: basicInfo.SOURCERATE,
+      
+      // 申购赎回
+      subscribeStatus: basicInfo.SGZT,
+      redeemStatus: basicInfo.SHZT,
+      minSubscribe: basicInfo.MINSG,
+      
+      // 基金公司
+      fundCompany: basicInfo.JJGS,
+      fundCompanyId: basicInfo.JJGSID,
+      
+      // 成立信息
+      establishDate: basicInfo.ESTABDATE,
+      
+      // 指数信息
+      indexCode: basicInfo.INDEXCODE,
+      indexName: basicInfo.INDEXNAME,
+      
+      // 评级
+      rating: basicInfo.RLEVEL_SZ,
+      
+      // 风险指标
+      sharp1: basicInfo.SHARP1,
+      sharp2: basicInfo.SHARP2,
+      sharp3: basicInfo.SHARP3,
+      maxDrawdown: basicInfo.MAXRETRA1,
+      
+      // 基金介绍
+      description: basicInfo.COMMENTS,
+      benchmark: basicInfo.BENCH,
+      investmentIdea: basicInfo.INVESTMENTIDEAR,
+    }
+    
+    res.json({ 
+      success: true, 
+      data: formattedInfo,
+    })
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: '获取基金基本信息失败',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    })
+  }
+})
+
+// 获取基金净值走势
+router.get('/:fundCode/net-diagram', async (req, res) => {
+  try {
+    const { fundCode } = req.params
+    const range = String(req.query.range || 'y')
+    
+    if (!fundCode) {
+      res.status(400).json({
+        success: false,
+        message: '缺少基金代码',
+      })
+      return
+    }
+    
+    // 验证时间范围参数
+    const validRanges = ['y', '3y', '6y', 'n', '3n', '5n']
+    if (!validRanges.includes(range)) {
+      res.status(400).json({
+        success: false,
+        message: `无效的时间范围参数，支持的值: ${validRanges.join(', ')}`,
+      })
+      return
+    }
+    
+    const result = await fetchFundNetDiagram(fundCode, range)
+    
+    res.json({ 
+      success: true, 
+      data: result.Datas,
+    })
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: '获取基金净值走势失败',
       error: error instanceof Error ? error.message : 'Unknown error',
     })
   }

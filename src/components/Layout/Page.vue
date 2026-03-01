@@ -14,8 +14,14 @@ const today = new Date().toLocaleDateString('en-US', {
 <template>
   <div class="page">
     <header class="page-header">
-      <h1 class="page-title">{{ title }}</h1>
-      <span class="page-date">{{ today }}</span>
+      <div class="page-header-left">
+        <h1 class="page-title">{{ title }}</h1>
+        <span class="page-date">{{ today }}</span>
+      </div>
+
+      <div class="page-header-right">
+        <slot name="header-right" />
+      </div>
     </header>
     <div class="page-container">
       <slot name="container" />
@@ -38,6 +44,9 @@ $header-height: 116px;
     top: 0;
     left: 80px;
     right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     padding: 24px 32px;
     height: $header-height;
     border-bottom: 1px solid var(--color-border);
@@ -45,6 +54,13 @@ $header-height: 116px;
     backdrop-filter: blur(6px);
     box-sizing: border-box;
     z-index: 100;
+  }
+
+  &-header-left {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 8px;
   }
 
   &-title {
@@ -59,6 +75,12 @@ $header-height: 116px;
     margin-top: 4px;
     font-size: 1rem;
     color: var(--color-text-tertiary);
+  }
+
+  &-header-right {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
   }
 
   &-container {

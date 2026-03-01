@@ -24,8 +24,6 @@ const initChart = () => {
   if (!chartRef.value) return
   
   chartInstance = echarts.init(chartRef.value)
-
-  console.log('props.stockHoldings', props.stockHoldings)
   
   const data = props.stockHoldings.map(stock => ({
     name: `${stock.stockName}\n(${stock.stockCode})`,
@@ -72,16 +70,17 @@ const initChart = () => {
               fontSize: 14,
               fontWeight: 'bold',
               lineHeight: 20,
+              color: '#fff',
             },
             code: {
               fontSize: 12,
-              color: '#999',
+              color: '#fff',
               lineHeight: 18,
             },
             ratio: {
               fontSize: 14,
               fontWeight: 'bold',
-              color: '#333',
+              color: '#fff',
               lineHeight: 20,
             },
           },

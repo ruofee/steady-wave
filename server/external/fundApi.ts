@@ -215,6 +215,24 @@ export interface SectorAllocationItem {
   HYMC: string           // 行业名称
   ZJZBL: string          // 占净值比例(%)
   FSRQ: string           // 日期
+  SZ: string             // 市值
+}
+
+/**
+ * 基金净值走势
+ */
+export interface FundNetDiagram {
+  Datas: {
+    DWJZ: string        // 单位净值，如 "1.4096"
+    FHFCBZ: string      // 分红发放标志，如 ""
+    FHFCZ: string       // 分红发放值，如 ""
+    FSRQ: string        // 净值日期，如 "2025-02-27"
+    JZZZL: string       // 净值涨跌幅，如 "0.05"
+    LJJZ: string        // 累计净值，如 "1.5796"
+    NAVTYPE: string     // 净值类型，如 "1"
+    RATE: string        // 比例，默认 "--"
+    Remarks: string     // 备注，默认 ""
+  }[]
 }
 
 /**
@@ -319,6 +337,27 @@ export async function fetchFundSectorAllocation(fundCode: string): Promise<{
   
   return get(url, params)
 }
+
+/**
+ * 获取基金净值走势
+ * @param fundCode 基金代码
+ * @param range 时间范围: y(近1月)、3y(近3月)、6y(近6月)、n(近1年)、3n(近3年)、5n(近5年)
+ */
+export async function fetchFundNetDiagram(fundCode: string, range: string = 'y'): Promise<FundNetDiagram> {
+  const url = 'https://fundmobapi.eastmoney.com/FundMApi/FundNetDiagram.ashx'
+  const params = {
+    FCODE: fundCode,
+    RANGE: range,
+    deviceid: 'Wap',
+    plat: 'Wap',
+    product: 'EFund',
+    version: '2.0.0',
+    _: Date.now().toString(),
+  }
+  
+  return get(url, params)
+}
+
 
 // ==================== 基金搜索功能 ====================
 
