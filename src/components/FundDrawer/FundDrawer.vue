@@ -151,22 +151,24 @@ watch(visible, (v) => {
   if (v) {
     if (editingFund.value) {
       // 编辑模式
-      selectedFund.value = {
+      const fundInfo = {
         fundCode: editingFund.value.fundCode,
         fundName: editingFund.value.fundName,
         fundType: '',
       }
-      searchKeyword.value = `${editingFund.value.fundName} (${editingFund.value.fundCode})`
+      selectedFund.value = fundInfo
+      searchKeyword.value = fundInfo.fundName  // 使用纯名称,与 selectFund 逻辑一致
       cost.value = editingFund.value.cost
       shares.value = editingFund.value.shares
     } else if (preFillFund.value) {
       // 新增模式,带预填充信息
-      selectedFund.value = {
+      const fundInfo = {
         fundCode: preFillFund.value.fundCode,
         fundName: preFillFund.value.fundName,
         fundType: '',
       }
-      searchKeyword.value = `${preFillFund.value.fundName} (${preFillFund.value.fundCode})`
+      selectedFund.value = fundInfo
+      searchKeyword.value = fundInfo.fundName  // 使用纯名称,与 selectFund 逻辑一致
       cost.value = preFillFund.value.cost || ''  // 使用预填充的成本价
       shares.value = ''
     } else {
