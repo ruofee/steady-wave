@@ -14,7 +14,7 @@ const fundDrawerStore = useFundDrawerStore()
 const fundsStore = useFundsStore()
 const dataStore = useDataStore()
 
-const { visible, editingFund } = storeToRefs(fundDrawerStore)
+const { visible, editingFund, preFillFund } = storeToRefs(fundDrawerStore)
 
 const searchKeyword = ref('')
 const searchResults = ref<FundSearchItem[]>([])
@@ -150,6 +150,7 @@ const handleDrawerClick = (e: MouseEvent) => {
 watch(visible, (v) => {
   if (v) {
     if (editingFund.value) {
+      // 编辑模式
       selectedFund.value = {
         fundCode: editingFund.value.fundCode,
         fundName: editingFund.value.fundName,
@@ -158,6 +159,16 @@ watch(visible, (v) => {
       searchKeyword.value = `${editingFund.value.fundName} (${editingFund.value.fundCode})`
       cost.value = editingFund.value.cost
       shares.value = editingFund.value.shares
+    } else if (preFillFund.value) {
+      // 新增模式,带预填充信息
+      selectedFund.value = {
+        fundCode: preFillFund.value.fundCode,
+        fundName: preFillFund.value.fundName,
+        fundType: '',
+      }
+      searchKeyword.value = `${preFillFund.value.fundName} (${preFillFund.value.fundCode})`
+      cost.value = preFillFund.value.cost || ''  // 使用预填充的成本价
+      shares.value = ''
     } else {
       resetForm()
     }
@@ -188,10 +199,10 @@ onUnmounted(() => {
                 type="text"
                 class="fund-drawer-input"
                 placeholder="输入代码或基金名称搜索"
-                :disabled="!!editingFund"
+                :disabled="!!editingFund || !!preFillFund"
                 autocomplete="off"
               />
-              <div v-if="showDropdown && !editingFund" class="fund-drawer-dropdown">
+              <div v-if="showDropdown && !editingFund && !preFillFund" class="fund-drawer-dropdown">
                 <div v-if="searchLoading" class="fund-drawer-dropdown-loading">搜索中...</div>
                 <template v-else>
                   <button

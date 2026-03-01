@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { storeToRefs } from 'pinia'
+import { useFundDrawerStore, useFundsStore } from '@/store'
 
 import Page from '@/components/Layout/Page.vue'
 import Card from '@/components/Card.vue'
@@ -88,11 +90,43 @@ const router = useRouter()
 const route = useRoute()
 const fundCode = computed(() => route.params.code as string)
 
+const fundDrawerStore = useFundDrawerStore()
+const fundsStore = useFundsStore()
+const { funds } = storeToRefs(fundsStore)
+
 const loading = ref(false)
 const error = ref('')
 const holdingInfo = ref<FundHoldingInfo | null>(null)
 const sectorAllocations = ref<SectorAllocation[]>([])
 const basicInfo = ref<FundBasicInfo | null>(null)
+
+// 检查当前基金是否已添加到持仓
+const isInHolding = computed(() => {
+  return funds.value.some(fund => fund.fundCode === fundCode.value)
+})
+
+// 获取当前基金的持仓信息
+const currentFund = computed(() => {
+  return funds.value.find(fund => fund.fundCode === fundCode.value)
+})
+
+const handleAddFund = () => {
+  if (!basicInfo.value) return
+  
+  // 打开抽屉(新增模式),预填充基金名称、代码和成本价(使用最新单位净值)
+  fundDrawerStore.openWithPreFill({
+    fundName: basicInfo.value.fundName,
+    fundCode: basicInfo.value.fundCode,
+    cost: basicInfo.value.unitNav,  // 使用最新单位净值作为成本价
+  })
+}
+
+const handleEditFund = () => {
+  if (!currentFund.value) return
+  
+  // 打开抽屉(编辑模式),传入当前基金信息
+  fundDrawerStore.open(currentFund.value)
+}
 
 const fetchHolding = async () => {
   if (!fundCode.value) return
@@ -125,6 +159,18 @@ onMounted(() => {
 
 <template>
   <Page title="基金详情">
+    <template #header-right>
+      <div class="action-buttons">
+        <button v-if="!isInHolding" class="action-btn add-btn" @click="handleAddFund">
+          <span class="btn-icon">+</span>
+          <span>新增基金</span>
+        </button>
+        <button v-else class="action-btn edit-btn" @click="handleEditFund">
+          <span class="btn-icon">✎</span>
+          <span>编辑基金</span>
+        </button>
+      </div>
+    </template>
     <template #container>
       <div>
         <button class="back-btn" @click="router.back()">
@@ -380,6 +426,62 @@ onMounted(() => {
   
   .growth-negative {
     color: #27ae60;
+  }
+}
+
+.action-buttons {
+  display: flex;
+  gap: 12px;
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  
+  .btn-icon {
+    font-size: 1rem;
+    font-weight: bold;
+  }
+  
+  &.add-btn {
+    background: var(--color-primary);
+    color: #fff;
+    
+    &:hover {
+      background: var(--color-primary-hover, #1d4ed8);
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+    }
+  }
+  
+  &.edit-btn {
+    background: var(--color-bg-white);
+    color: var(--color-text-primary);
+    border: 1px solid var(--color-border);
+    
+    &:hover {
+      border-color: var(--color-primary);
+      color: var(--color-primary);
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+  }
+  
+  @media (max-width: 768px) {
+    padding: 6px 12px;
+    font-size: 0.8125rem;
+    
+    span:not(.btn-icon) {
+      display: none;
+    }
   }
 }
 
