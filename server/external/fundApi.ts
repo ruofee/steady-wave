@@ -38,11 +38,27 @@ export interface FundRealtimeInfo {
  * 基金持仓占比数据
  */
 export interface FundPosition {
-  JZRQ: string           // 净值日期
-  GP: string             // 股票占比(%)
-  ZQ: string             // 债券占比(%)
-  HB: string             // 现金占比(%)
-  QT: string             // 其他占比(%)
+  fundStocks: {
+  GPDM: string,      // 股票代码
+  GPJC: string,      // 股票简称
+  JZBL: string,      // 占基金净值比例(%)
+  TEXCH: string,     // 所属交易所
+  ISINVISBL: string, // 是否隐藏
+  PCTNVCHGTYPE: string, // 持仓变动类型
+  PCTNVCHG: string,  // 持仓变动比例(%)
+  NEWTEXCH: string,  // 新交易所标识
+  INDEXCODE: string, // 指数代码
+  INDEXNAME: string, // 指数名称
+  }[],
+  fundboods: {
+    ZQDM: string // 债券代码
+    ZQMC: string // 债券名称
+    ZJZBL: string // 占净值比例(%)
+    ISBROKEN: string // 是否违约
+  }[],
+  fundfofs: any[],        // FOF持仓(通常为空数组)
+  ETFCODE: string | null, // ETF基金代码
+  ETFSHORTNAME: string | null // ETF简称
 }
 
 /**
@@ -187,7 +203,9 @@ export interface AssetAllocationItem {
   GP: string             // 股票占比(%)
   ZQ: string             // 债券占比(%)
   HB: string             // 现金占比(%)
+  JZC: string            // 净资产(单位未知,原数据为"13.3467")
   QT: string             // 其他占比(%)
+  JJ: string             // 说明/备注/基金简写等，原数据为"--"
 }
 
 /**
@@ -224,7 +242,7 @@ export async function fetchFundRealtimeInfo(fundCodes: string | string[]): Promi
  * @param fundCode 基金代码
  */
 export async function fetchFundPosition(fundCode: string): Promise<{
-  Datas: FundPosition[]
+  Datas: FundPosition
 }> {
   const url = `${BASE_URL}/FundMNInverstPosition`
   const params = {

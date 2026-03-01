@@ -15,7 +15,7 @@ const router = createRouter({
     {
       path: '/fund/:code',
       name: 'FundDetail',
-      component: () => import('../views/FundDetailView.vue'),
+      component: () => import('../views/FundDetailView/index.vue'),
     },
     {
       path: '/transparency',

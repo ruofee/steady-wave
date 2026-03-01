@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { randomUUID } from 'crypto'
 import { getDb } from '../db.js'
-import { searchFunds, fetchFundBasicInfo } from '../external/fundApi.js'
+import { searchFunds, fetchFundBasicInfo, fetchFundAssetAllocation, fetchFundPosition } from '../external/fundApi.js'
 import { fetchFundHolding } from '../external/fundHolding.js'
 import { updateOverview, calculateFundProfit } from './data.js'
 
@@ -187,7 +187,50 @@ router.get('/:fundCode/holding', async (req, res) => {
       return
     }
     
-    const holdingInfo = await fetchFundHolding(fundCode)
+    // 并行获取资产配置和持仓信息
+    const [assetAllocationResult, positionResult] = await Promise.all([
+      fetchFundAssetAllocation(fundCode),
+      fetchFundPosition(fundCode),
+    ])
+    
+    const assetAllocation = assetAllocationResult.Datas?.[0]
+    const position = positionResult.Datas
+    
+    // 转换持仓数据格式
+    const stockHoldings = (position?.fundStocks || []).map(stock => {
+      return {
+        stockCode: stock.GPDM,
+        stockName: stock.GPJC,
+        holdRatio: parseFloat(stock.JZBL || '0'),
+        holdShares: 0, // 新接口没有提供持有数量
+        holdValue: 0, // 新接口没有提供市值数据
+        updateDate: assetAllocation?.FSRQ || '',
+      }
+    })
+    
+    const bondHoldings = (position?.fundboods || []).map(bond => ({
+      bondCode: bond.ZQDM,
+      bondName: bond.ZQMC,
+      holdRatio: parseFloat(bond.ZJZBL || '0'),
+      holdValue: 0, // 新接口没有提供市值数据
+      updateDate: assetAllocation?.FSRQ || '',
+    }))
+    
+    // 组装完整的持仓信息
+    const holdingInfo = {
+      fundCode,
+      fundName: position?.ETFSHORTNAME || '',
+      assetAllocation: {
+        stocks: parseFloat(assetAllocation?.GP || '0'),
+        bonds: parseFloat(assetAllocation?.ZQ || '0'),
+        cash: parseFloat(assetAllocation?.HB || '0'),
+        other: parseFloat(assetAllocation?.QT || '0'),
+        updateDate: assetAllocation?.FSRQ || '',
+      },
+      stockHoldings,
+      bondHoldings,
+      updateDate: assetAllocation?.FSRQ || '',
+    }
     
     res.json({ 
       success: true, 

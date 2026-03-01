@@ -2,7 +2,9 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import Page from '@/components/Layout/Page.vue'
-import FundHoldingChart from '@/components/FundDetail/FundHoldingChart.vue'
+import AssetAllocationChart from './AssetAllocationChart.vue'
+import StockHoldingChart from './StockHoldingChart.vue'
+import BondHoldingChart from './BondHoldingChart.vue'
 import { get } from '@/packages/request'
 
 interface StockHolding {
@@ -55,6 +57,7 @@ const fetchHolding = async () => {
   try {
     const res = await get<FundHoldingInfo>(`/funds/${fundCode.value}/holding`)
     holdingInfo.value = res.data || null
+    console.log('holdingInfo', holdingInfo.value)
   } catch (e) {
     error.value = e instanceof Error ? e.message : '获取持仓数据失败'
     console.error('Failed to fetch fund holding:', e)
@@ -85,6 +88,10 @@ onMounted(() => {
         <div v-else-if="holdingInfo" class="fund-content">
           <div class="fund-info">
             <div class="info-item">
+              <span class="label">基金名称</span>
+              <span class="value">{{ holdingInfo.fundName }}</span>
+            </div>
+            <div class="info-item">
               <span class="label">基金代码</span>
               <span class="value">{{ holdingInfo.fundCode }}</span>
             </div>
@@ -92,29 +99,26 @@ onMounted(() => {
               <span class="label">数据更新日期</span>
               <span class="value">{{ holdingInfo.updateDate }}</span>
             </div>
-            <div class="info-item">
-              <span class="label">股票仓位</span>
-              <span class="value">{{ holdingInfo.assetAllocation.stocks.toFixed(2) }}%</span>
-            </div>
-            <div class="info-item">
-              <span class="label">债券仓位</span>
-              <span class="value">{{ holdingInfo.assetAllocation.bonds.toFixed(2) }}%</span>
-            </div>
-            <div class="info-item">
-              <span class="label">现金占比</span>
-              <span class="value">{{ holdingInfo.assetAllocation.cash.toFixed(2) }}%</span>
-            </div>
           </div>
           
-          <FundHoldingChart 
-            v-if="holdingInfo.stockHoldings.length > 0 || holdingInfo.bondHoldings.length > 0"
-            :stock-holdings="holdingInfo.stockHoldings"
-            :bond-holdings="holdingInfo.bondHoldings"
-            :asset-allocation="holdingInfo.assetAllocation"
-          />
-          
-          <div v-else class="empty">
-            <p>暂无持仓数据</p>
+          <div class="charts-grid">
+            <AssetAllocationChart 
+              :asset-allocation="holdingInfo.assetAllocation"
+            />
+            
+            <StockHoldingChart 
+              v-if="holdingInfo.stockHoldings.length > 0"
+              :stock-holdings="holdingInfo.stockHoldings"
+            />
+            
+            <BondHoldingChart 
+              v-if="holdingInfo.bondHoldings.length > 0"
+              :bond-holdings="holdingInfo.bondHoldings"
+            />
+            
+            <div v-if="holdingInfo.stockHoldings.length === 0 && holdingInfo.bondHoldings.length === 0" class="empty">
+              <p>暂无持仓数据</p>
+            </div>
           </div>
         </div>
       </div>
@@ -191,6 +195,16 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 24px;
+}
+
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(600px, 1fr));
+  gap: 24px;
+  
+  @media (min-width: 768px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 .fund-info {

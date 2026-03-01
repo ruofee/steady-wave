@@ -44,6 +44,7 @@ $header-height: 116px;
     background-color: rgba(255, 255, 255, 0.8);
     backdrop-filter: blur(6px);
     box-sizing: border-box;
+    z-index: 100;
   }
 
   &-title {
