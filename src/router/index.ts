@@ -33,6 +33,26 @@ const router = createRouter({
       component: () => import('../views/AssetsView.vue'),
     },
   ],
+  scrollBehavior(to, from, savedPosition) {
+    // 如果有保存的位置(浏览器前进后退),使用保存的位置
+    if (savedPosition) {
+      return savedPosition
+    }
+    
+    // 如果有锚点,滚动到锚点位置
+    if (to.hash) {
+      return {
+        el: to.hash,
+        behavior: 'smooth',
+      }
+    }
+    
+    // 否则滚动到顶部,使用平滑滚动
+    return {
+      top: 0,
+      behavior: 'smooth',
+    }
+  },
 })
 
 export default router
