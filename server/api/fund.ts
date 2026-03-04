@@ -174,6 +174,43 @@ router.put('/:fundCode', async (req, res) => {
   }
 })
 
+// 删除基金
+router.delete('/:id', async (req, res) => {
+  try {
+    const { id } = req.params
+    
+    if (!id) {
+      res.status(400).json({
+        success: false,
+        message: '缺少基金ID',
+      })
+      return
+    }
+    
+    const db = await getDb()
+    const fundIndex = db.data.funds.findIndex((f) => f.id === id)
+    
+    if (fundIndex === -1) {
+      res.status(404).json({
+        success: false,
+        message: '基金不存在',
+      })
+      return
+    }
+    
+    db.data.funds.splice(fundIndex, 1)
+    await updateOverview(db)
+    
+    res.json({ success: true, message: '删除成功' })
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: '删除基金失败',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    })
+  }
+})
+
 // 获取基金持仓
 router.get('/:fundCode/holding', async (req, res) => {
   try {

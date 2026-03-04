@@ -78,6 +78,18 @@ const handleEditFund = (fund: Fund) => {
 const handleViewDetail = (fundCode: string) => {
   router.push(`/fund/${fundCode}`)
 }
+
+const handleDeleteFund = async (fund: Fund) => {
+  if (!confirm(`确定要删除基金 ${fund.fundName} (${fund.fundCode}) 吗？`)) {
+    return
+  }
+
+  try {
+    await fundsStore.deleteFund(fund.id)
+  } catch (error) {
+    alert('删除基金失败，请稍后重试')
+  }
+}
 </script>
 
 <template>
@@ -128,9 +140,14 @@ const handleViewDetail = (fundCode: string) => {
                     <div class="fund-name-text">{{ fund.fundName }}</div>
                     <div class="fund-code">{{ fund.fundCode }}</div>
                   </div>
-                  <button class="fund-edit-btn" @click="handleEditFund(fund)">
-                    编辑
-                  </button>
+                  <div class="fund-actions">
+                    <button class="fund-action-btn fund-edit-btn" @click="handleEditFund(fund)">
+                      编辑
+                    </button>
+                    <button class="fund-action-btn fund-delete-btn" @click="handleDeleteFund(fund)">
+                      删除
+                    </button>
+                  </div>
                 </div>
               </td>
               <td class="fund-amount">¥{{ formatAmount(fund.currentValue) }}</td>
@@ -296,7 +313,13 @@ const handleViewDetail = (fundCode: string) => {
   color: var(--color-text-tertiary);
 }
 
-.fund-edit-btn {
+.fund-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.fund-action-btn {
   padding: 4px 12px;
   font-size: 0.75rem;
   border: 1px solid var(--color-border);
@@ -306,7 +329,6 @@ const handleViewDetail = (fundCode: string) => {
   cursor: pointer;
   transition: all 0.2s;
   opacity: 0;
-  flex-shrink: 0;
 
   &:hover {
     border-color: var(--color-primary);
@@ -315,7 +337,19 @@ const handleViewDetail = (fundCode: string) => {
   }
 }
 
-tbody tr:hover .fund-edit-btn {
+.fund-edit-btn {
+  // 保持默认样式
+}
+
+.fund-delete-btn {
+  &:hover {
+    border-color: var(--color-danger);
+    color: var(--color-danger);
+    background-color: var(--color-danger-light);
+  }
+}
+
+tbody tr:hover .fund-action-btn {
   opacity: 1;
 }
 
