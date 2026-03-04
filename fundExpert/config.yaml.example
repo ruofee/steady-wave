@@ -1,0 +1,33 @@
+# 配置文件示例
+# 请复制此文件为 config.yaml 并填入你的实际配置
+
+llm:
+  model: "qwen-max"  # 或其他 qwen 模型
+  api_key: "your-qwen-api-key-here"
+  api_base: "https://dashscope.aliyuncs.com/compatible-mode/v1"  # 通义千问 API 地址
+  temperature: 0.7
+  max_tokens: 4000
+
+server:
+  host: "0.0.0.0"
+  port: 8001
+
+# 全天候策略配置
+all_weather_strategy:
+  # 标准配比（Ray Dalio 全天候策略）
+  standard_allocation:
+    stock: 0.30      # 股票（30%）
+    long_bond: 0.40  # 长期国债（40%）
+    mid_bond: 0.15   # 中期国债（15%）
+    commodity: 0.075 # 商品（7.5%）
+    gold: 0.075      # 黄金（7.5%）
+  
+  # 偏差阈值（超过此阈值需要调整）
+  deviation_threshold: 0.05  # 5%
+  
+  # 涨跌比例阈值
+  daily_change_threshold:
+    strong_rise: 0.02    # 强势上涨 > 2%
+    moderate_rise: 0.01  # 温和上涨 > 1%
+    moderate_fall: -0.01 # 温和下跌 < -1%
+    strong_fall: -0.02   # 强势下跌 < -2%
