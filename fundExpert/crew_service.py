@@ -10,21 +10,15 @@ from tools import (
     calculate_portfolio_tool
 )
 import json
+import re
 
 
 class FundAnalysisService:
     """基金分析服务"""
     
     def __init__(self, config: Dict):
-        """
-        初始化服务
-        
-        Args:
-            config: 配置字典
-        """
         self.config = config
         
-        # 初始化 LLM（使用通义千问）
         self.llm = LLM(
             model=config['llm']['model'],
             api_key=config['llm']['api_key'],
@@ -33,33 +27,19 @@ class FundAnalysisService:
             max_tokens=config['llm']['max_tokens']
         )
         
-        # 创建 tools
         self.data_tools = [
             fetch_multiple_funds_tool,
             fetch_market_index_tool,
             calculate_portfolio_tool
         ]
         
-        # 创建 agents
         self.data_collector = create_data_collector_agent(self.llm, self.data_tools)
         self.strategy_analyst = create_strategy_analyst_agent(self.llm)
     
     def analyze_portfolio(self, holdings: List[Dict]) -> Dict:
-        """
-        分析投资组合
-        
-        Args:
-            holdings: 持仓列表
-                     格式：[{"fund_code": "000001", "amount": 10000, "ratio": 0.3, "asset_type": "stock"}, ...]
-                     
-        Returns:
-            分析结果的字典
-        """
-        # 提取基金代码
         fund_codes = [h['fund_code'] for h in holdings]
         fund_codes_str = ','.join(fund_codes)
         
-        # 任务1：数据采集
         data_collection_task = Task(
             description=f"""
             请完成以下数据采集任务：
@@ -79,7 +59,6 @@ class FundAnalysisService:
             expected_output="包含基金数据、指数数据和组合统计的完整 JSON 数据"
         )
         
-        # 任务2：策略分析
         strategy_analysis_task = Task(
             description=f"""
             基于数据采集团队提供的数据，请进行全天候策略分析：
@@ -90,163 +69,260 @@ class FundAnalysisService:
             全天候策略标准配比：
             {json.dumps(self.config['all_weather_strategy']['standard_allocation'], ensure_ascii=False, indent=2)}
             
-            请完成以下分析：
+            请完成以下分析，并严格按照以下格式输出（使用 Markdown）：
             
-            1. 配比分析
-               - 对比当前持仓与全天候策略标准配比的差异
-               - 识别是否存在配比异常（偏差超过 {self.config['all_weather_strategy']['deviation_threshold'] * 100}%）
-               - 评估当前配置的风险暴露情况
+            ## 一、配比分析
+            对比当前持仓与全天候策略标准配比的差异，识别配比异常（偏差超过 {self.config['all_weather_strategy']['deviation_threshold'] * 100}%），评估风险暴露。
+
+            ## 二、市场环境分析
+            根据大盘指数表现判断市场阶段，分析各类资产表现。
+
+            ## 三、风险分析
+            ### 具体风险
+            请逐一列出当前投资组合面临的具体风险，每个风险用 `- ` 开头，格式：
+            - **风险名称**：风险描述
             
-            2. 市场环境分析
-               - 根据大盘指数的表现，判断当前市场所处阶段
-               - 分析各类资产在当前市场环境下的表现
+            ### 风险等级
+            综合评估当前风险等级（低/中/高）。
+
+            ## 四、调仓建议
+            ### 是否建议调仓
+            明确回答"是"或"否"。
             
-            3. 调仓建议
-               - 如果配比异常，给出具体的调整建议（哪些基金需要加仓/减仓，建议比例是多少）
-               - 根据今日涨跌情况，判断是否需要进行再平衡
-               - 如果今日整体涨幅超过 {self.config['all_weather_strategy']['daily_change_threshold']['strong_rise'] * 100}%，考虑适当减仓
-               - 如果今日整体跌幅超过 {abs(self.config['all_weather_strategy']['daily_change_threshold']['strong_fall']) * 100}%，考虑适当加仓
+            ### 具体调仓操作
+            如建议调仓，请逐一列出操作，每个操作用 `- ` 开头，格式：
+            - **基金代码 基金名称**：加仓/减仓/持平，当前比例 X% → 建议比例 Y%，原因说明：具体原因
             
-            4. 风险提示
-               - 指出当前投资组合的主要风险点
-               - 提供风险控制建议
-            
-            请以清晰、专业的语言给出分析结论和操作建议。
+            如不建议调仓，说明原因。
+
+            ## 五、总结与建议
+            给出简洁的操作总结。
+
+            注意：
+            - 如果今日整体涨幅超过 {self.config['all_weather_strategy']['daily_change_threshold']['strong_rise'] * 100}%，考虑适当减仓
+            - 如果今日整体跌幅超过 {abs(self.config['all_weather_strategy']['daily_change_threshold']['strong_fall']) * 100}%，考虑适当加仓
             """,
             agent=self.strategy_analyst,
-            expected_output="完整的全天候策略分析报告，包括配比分析、调仓建议和风险提示",
+            expected_output="按格式输出的全天候策略分析报告",
             context=[data_collection_task]
         )
         
-        # 创建 Crew 并执行
         crew = Crew(
             agents=[self.data_collector, self.strategy_analyst],
             tasks=[data_collection_task, strategy_analysis_task],
             verbose=True
         )
         
-        # 执行分析
         result = crew.kickoff()
-        
-        # 返回结构化结果
         return self._format_result(result, holdings)
     
     def _format_result(self, raw_result, holdings: List[Dict]) -> Dict:
-        """
-        格式化分析结果为固定的 JSON 格式
-        
-        Args:
-            raw_result: CrewAI 返回的原始结果
-            holdings: 持仓列表
-            
-        Returns:
-            格式化后的结果字典
-        """
-        # 将 CrewAI 的结果转换为字符串
         result_str = str(raw_result)
+        rebalance_suggestions = self._extract_rebalance_suggestions(result_str)
+        # 用 rebalance_suggestions 作为主数据源来增强 holdings
+        enhanced_holdings = self._enhance_holdings_with_actions(result_str, holdings, rebalance_suggestions)
+        risk_details = self._extract_risk_details(result_str)
+        has_rebalance = self._check_has_rebalance(result_str, rebalance_suggestions)
         
-        # 增强持仓数据，添加操作建议
-        enhanced_holdings = self._enhance_holdings_with_actions(result_str, holdings)
-        
-        # 构建返回格式
-        formatted_result = {
+        return {
             "status": "success",
             "timestamp": self._get_current_timestamp(),
             "has_risk_warning": self._check_has_risk_warning(result_str),
+            "risk_details": risk_details,
+            "has_rebalance_suggestion": has_rebalance,
+            "rebalance_suggestions": rebalance_suggestions,
             "holdings": enhanced_holdings,
             "report": result_str
         }
-        
-        return formatted_result
     
     def _check_has_risk_warning(self, text: str) -> bool:
-        """
-        检查是否存在风险提示
-        
-        Args:
-            text: 分析报告文本
-            
-        Returns:
-            是否存在风险提示
-        """
         risk_keywords = ['风险', '警告', '注意', '谨慎', '危险', '亏损']
         return any(keyword in text for keyword in risk_keywords)
     
-    def _enhance_holdings_with_actions(self, text: str, holdings: List[Dict]) -> List[Dict]:
-        """
-        增强持仓数据，添加操作建议
+    def _extract_risk_details(self, text: str) -> List[str]:
+        """从报告中提取具体风险列表"""
+        risks = []
         
-        Args:
-            text: 分析报告文本
-            holdings: 原始持仓列表
-            
-        Returns:
-            增强后的持仓列表
+        in_risk_section = False
+        for line in text.split('\n'):
+            stripped = line.strip()
+            if '具体风险' in stripped or '风险分析' in stripped or '风险提示' in stripped:
+                in_risk_section = True
+                continue
+            if in_risk_section:
+                if stripped.startswith('#'):
+                    if '风险' not in stripped:
+                        in_risk_section = False
+                    continue
+                if stripped.startswith('- ') or stripped.startswith('* '):
+                    risk_text = stripped[2:].strip()
+                    risk_text = re.sub(r'\*\*(.*?)\*\*[：:]?\s*', r'\1：', risk_text)
+                    if risk_text:
+                        risks.append(risk_text)
+                elif stripped.startswith(('1.', '2.', '3.', '4.', '5.')):
+                    risk_text = re.sub(r'^\d+\.\s*', '', stripped)
+                    risk_text = re.sub(r'\*\*(.*?)\*\*[：:]?\s*', r'\1：', risk_text)
+                    if risk_text:
+                        risks.append(risk_text)
+        
+        if not risks:
+            for line in text.split('\n'):
+                stripped = line.strip()
+                if ('风险' in stripped) and (stripped.startswith('- ') or stripped.startswith('* ')):
+                    risk_text = stripped[2:].strip()
+                    risk_text = re.sub(r'\*\*(.*?)\*\*[：:]?\s*', r'\1：', risk_text)
+                    if risk_text and len(risk_text) > 4:
+                        risks.append(risk_text)
+        
+        return risks
+    
+    def _check_has_rebalance(self, text: str, suggestions: List[Dict]) -> bool:
+        if suggestions:
+            return True
+        
+        rebalance_section = False
+        for line in text.split('\n'):
+            stripped = line.strip()
+            if '是否建议调仓' in stripped or '是否调仓' in stripped:
+                rebalance_section = True
+                continue
+            if rebalance_section:
+                if '是' in stripped and '否' not in stripped:
+                    return True
+                if '不' in stripped or '否' in stripped or '无需' in stripped:
+                    return False
+                if stripped.startswith('#'):
+                    break
+        
+        rebalance_keywords = ['建议调仓', '建议加仓', '建议减仓', '需要调整', '建议调整']
+        return any(kw in text for kw in rebalance_keywords)
+    
+    def _extract_rebalance_suggestions(self, text: str) -> List[Dict]:
         """
+        从报告中提取结构化调仓建议
+        返回: [{ "name": str, "suggestion": str, "reason": str }]
+        """
+        raw_lines = []
+        
+        in_rebalance_section = False
+        for line in text.split('\n'):
+            stripped = line.strip()
+            if '具体调仓' in stripped or '调仓操作' in stripped:
+                in_rebalance_section = True
+                continue
+            if in_rebalance_section:
+                if stripped.startswith('#'):
+                    if '调仓' not in stripped and '建议' not in stripped:
+                        in_rebalance_section = False
+                    continue
+                if stripped.startswith('- ') or stripped.startswith('* '):
+                    raw = stripped[2:].strip()
+                    raw = re.sub(r'\*\*(.*?)\*\*', r'\1', raw)
+                    if raw:
+                        raw_lines.append(raw)
+                elif stripped.startswith(('1.', '2.', '3.', '4.', '5.')):
+                    raw = re.sub(r'^\d+\.\s*', '', stripped)
+                    raw = re.sub(r'\*\*(.*?)\*\*', r'\1', raw)
+                    if raw:
+                        raw_lines.append(raw)
+        
+        suggestions = []
+        for raw in raw_lines:
+            parsed = self._parse_rebalance_line(raw)
+            if parsed:
+                suggestions.append(parsed)
+        
+        return suggestions
+    
+    def _parse_rebalance_line(self, line: str) -> Dict:
+        """
+        解析单行调仓建议文本为结构化数据。
+        
+        输入格式示例:
+        "001406 东方红策略精选混合 C：减仓，当前比例 100% → 建议比例 30%，原因说明：xxx"
+        "[待选] 长期国债基金（如：007070 等）：加仓，当前比例 0% → 建议比例 40%，原因说明：xxx"
+        """
+        # 用第一个冒号分割 name 和后面的内容
+        split_patterns = ['：', ':']
+        name = line
+        rest = ''
+        
+        for sep in split_patterns:
+            idx = line.find(sep)
+            if idx > 0:
+                name = line[:idx].strip()
+                rest = line[idx + 1:].strip()
+                break
+        
+        if not rest:
+            return {"name": name, "suggestion": line, "reason": ""}
+        
+        # 从 rest 中分离 suggestion 和 reason
+        # 格式: "减仓，当前比例 100% → 建议比例 30%，原因说明：xxx"
+        reason = ''
+        suggestion = rest
+        
+        reason_markers = ['原因说明：', '原因说明:', '原因：', '原因:']
+        for marker in reason_markers:
+            marker_idx = rest.find(marker)
+            if marker_idx >= 0:
+                suggestion = rest[:marker_idx].rstrip('，, ')
+                reason = rest[marker_idx + len(marker):].strip()
+                break
+        
+        return {
+            "name": name,
+            "suggestion": suggestion,
+            "reason": reason
+        }
+    
+    def _enhance_holdings_with_actions(self, text: str, holdings: List[Dict], rebalance_suggestions: List[Dict]) -> List[Dict]:
+        """用 rebalance_suggestions 作为主数据源来增强 holdings"""
+        # 先构建基金代码到调仓建议的映射
+        suggestion_map: Dict[str, Dict] = {}
+        for s in rebalance_suggestions:
+            # 从 name 中提取基金代码（6位数字）
+            codes = re.findall(r'\b(\d{6})\b', s['name'])
+            for code in codes:
+                suggestion_map[code] = s
+        
         enhanced = []
-        
         for holding in holdings:
             fund_code = holding['fund_code']
             enhanced_holding = holding.copy()
             
-            # 提取该基金的操作建议
-            action_info = self._extract_fund_action(text, fund_code, holding['ratio'])
-            enhanced_holding.update(action_info)
+            if fund_code in suggestion_map:
+                s = suggestion_map[fund_code]
+                action_info = self._parse_action_from_suggestion(s, holding['ratio'])
+            else:
+                action_info = self._extract_fund_action_fallback(text, fund_code, holding['ratio'])
             
+            enhanced_holding.update(action_info)
             enhanced.append(enhanced_holding)
         
         return enhanced
     
-    def _extract_fund_action(self, text: str, fund_code: str, current_ratio: float) -> Dict:
-        """
-        提取单个基金的操作建议
+    def _parse_action_from_suggestion(self, suggestion: Dict, current_ratio: float) -> Dict:
+        """从结构化调仓建议中解析 action 信息"""
+        s_text = suggestion['suggestion']
         
-        Args:
-            text: 分析报告文本
-            fund_code: 基金代码
-            current_ratio: 当前比例
-            
-        Returns:
-            操作建议字典
-        """
-        # 默认值
-        action = 0  # 0=持平, 1=加仓, -1=减仓
+        action = 0
         suggested_ratio = current_ratio
-        reason = "维持当前配置"
+        reason = suggestion.get('reason', '') or suggestion['suggestion']
         
-        # 在文本中搜索该基金相关的建议
-        lines = text.split('\n')
-        fund_mentioned = False
+        if '减仓' in s_text or '卖出' in s_text:
+            action = -1
+        elif '加仓' in s_text or '买入' in s_text or '增持' in s_text:
+            action = 1
         
-        for i, line in enumerate(lines):
-            if fund_code in line or '基金' in line:
-                fund_mentioned = True
-                # 检查附近的文本
-                context = '\n'.join(lines[max(0, i-2):min(len(lines), i+3)])
-                
-                # 判断操作类型
-                if '减仓' in context or '卖出' in context or '降至' in context:
-                    action = -1
-                    reason = "建议减仓"
-                    # 尝试提取目标比例
-                    suggested_ratio = self._extract_ratio_from_text(context, current_ratio, is_reduce=True)
-                elif '加仓' in context or '买入' in context or '增持' in context:
-                    action = 1
-                    reason = "建议加仓"
-                    suggested_ratio = self._extract_ratio_from_text(context, current_ratio, is_reduce=False)
-                
-                break
-        
-        # 如果没有提到该基金，根据整体建议判断
-        if not fund_mentioned:
-            if '减仓' in text or '降低仓位' in text:
-                action = -1
-                reason = "根据整体策略建议减仓"
-                suggested_ratio = max(0, current_ratio * 0.3)  # 减至30%
-            elif '加仓' in text or '增加配置' in text:
-                action = 1
-                reason = "根据整体策略建议加仓"
-                # 保持现有比例或略微增加
+        # 提取"建议比例 X%"
+        ratio_match = re.search(r'建议比例\s*(\d+(?:\.\d+)?)\s*%', s_text)
+        if ratio_match:
+            suggested_ratio = float(ratio_match.group(1)) / 100
+        else:
+            ratio_match = re.search(r'→\s*(\d+(?:\.\d+)?)\s*%', s_text)
+            if ratio_match:
+                suggested_ratio = float(ratio_match.group(1)) / 100
         
         return {
             "action": action,
@@ -254,48 +330,71 @@ class FundAnalysisService:
             "action_reason": reason
         }
     
-    def _extract_ratio_from_text(self, text: str, current_ratio: float, is_reduce: bool) -> float:
-        """
-        从文本中提取目标比例
+    def _extract_fund_action_fallback(self, text: str, fund_code: str, current_ratio: float) -> Dict:
+        """当 rebalance_suggestions 中没有匹配时的回退逻辑"""
+        action = 0
+        suggested_ratio = current_ratio
+        reason = "维持当前配置"
         
-        Args:
-            text: 文本内容
-            current_ratio: 当前比例
-            is_reduce: 是否为减仓
+        # 在调仓相关段落中搜索基金代码
+        in_rebalance = False
+        lines = text.split('\n')
+        
+        for i, line in enumerate(lines):
+            stripped = line.strip()
+            if '调仓' in stripped and stripped.startswith('#'):
+                in_rebalance = True
+                continue
+            if in_rebalance and stripped.startswith('#') and '调仓' not in stripped and '建议' not in stripped:
+                in_rebalance = False
+                continue
             
-        Returns:
-            目标比例
-        """
-        import re
+            if fund_code in line:
+                context = '\n'.join(lines[max(0, i - 2):min(len(lines), i + 3)])
+                if '减仓' in context or '卖出' in context or '降至' in context:
+                    action = -1
+                    reason = "建议减仓"
+                    suggested_ratio = self._extract_target_ratio(context, current_ratio, is_reduce=True)
+                elif '加仓' in context or '买入' in context or '增持' in context:
+                    action = 1
+                    reason = "建议加仓"
+                    suggested_ratio = self._extract_target_ratio(context, current_ratio, is_reduce=False)
+                # 优先使用调仓段落的结果
+                if in_rebalance and action != 0:
+                    break
+                if action != 0:
+                    break
         
-        # 查找百分比模式
-        patterns = [
-            r'(\d+(?:\.\d+)?)\s*%',
-            r'(\d+(?:\.\d+)?)\s*percent',
-            r'至\s*(\d+(?:\.\d+)?)\s*%'
-        ]
+        return {
+            "action": action,
+            "suggested_ratio": round(suggested_ratio, 4),
+            "action_reason": reason
+        }
+    
+    def _extract_target_ratio(self, text: str, current_ratio: float, is_reduce: bool) -> float:
+        ratio_match = re.search(r'建议比例\s*(\d+(?:\.\d+)?)\s*%', text)
+        if ratio_match:
+            return float(ratio_match.group(1)) / 100
         
+        ratio_match = re.search(r'→\s*(\d+(?:\.\d+)?)\s*%', text)
+        if ratio_match:
+            return float(ratio_match.group(1)) / 100
+        
+        patterns = [r'至\s*(\d+(?:\.\d+)?)\s*%', r'(\d+(?:\.\d+)?)\s*%']
         for pattern in patterns:
             matches = re.findall(pattern, text)
             if matches:
                 try:
-                    # 取第一个匹配的数值
-                    ratio = float(matches[0]) / 100
+                    ratio = float(matches[-1]) / 100
                     if 0 <= ratio <= 1:
                         return ratio
                 except:
                     pass
         
-        # 如果没有找到具体比例，使用默认逻辑
         if is_reduce:
-            # 减仓：减至当前的30%
             return max(0, current_ratio * 0.3)
-        else:
-            # 加仓：增加20%
-            return min(1.0, current_ratio * 1.2)
+        return min(1.0, current_ratio * 1.2)
     
     def _get_current_timestamp(self) -> str:
-        """获取当前时间戳"""
         from datetime import datetime
         return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-

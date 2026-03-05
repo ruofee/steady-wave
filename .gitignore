@@ -57,3 +57,4 @@ env/
 fundExpert/config.yaml
 fundExpert/.env
 fundExpert/db.json
+fundExpert/reports/

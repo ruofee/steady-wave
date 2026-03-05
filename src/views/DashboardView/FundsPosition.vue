@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { useFundsStore, useFundDrawerStore } from '@/store'
+import { useFundsStore, useFundDrawerStore, useAIAnalysisStore } from '@/store'
 import type { Fund } from '@/store/funds'
 import Card from '@/components/Card.vue'
 import ProfitIcon from '@/assets/icons/profit.svg?raw'
@@ -13,6 +13,19 @@ type SortOrder = 'asc' | 'desc' | null
 const router = useRouter()
 const fundsStore = useFundsStore()
 const fundDrawerStore = useFundDrawerStore()
+const aiAnalysisStore = useAIAnalysisStore()
+
+const getActionLabel = (action: number) => {
+  if (action === 1) return '加仓'
+  if (action === -1) return '减仓'
+  return '持平'
+}
+
+const getActionClass = (action: number) => {
+  if (action === 1) return 'action-buy'
+  if (action === -1) return 'action-sell'
+  return 'action-hold'
+}
 
 const sortField = ref<SortField | null>(null)
 const sortOrder = ref<SortOrder>(null)
@@ -130,6 +143,7 @@ const handleDeleteFund = async (fund: Fund) => {
                   </span>
                 </span>
               </th>
+              <th v-if="aiAnalysisStore.result">AI 建议</th>
             </tr>
           </thead>
           <tbody>
@@ -173,14 +187,27 @@ const handleDeleteFund = async (fund: Fund) => {
                   </span>
                 </div>
               </td>
+              <td v-if="aiAnalysisStore.result" class="fund-ai-action">
+                <template v-if="aiAnalysisStore.getActionByFundCode(fund.fundCode)">
+                  <span 
+                    class="ai-action-tag" 
+                    :class="getActionClass(aiAnalysisStore.getActionByFundCode(fund.fundCode)!.action)"
+                    :title="aiAnalysisStore.getActionByFundCode(fund.fundCode)!.action_reason"
+                  >
+                    {{ getActionLabel(aiAnalysisStore.getActionByFundCode(fund.fundCode)!.action) }}
+                    → {{ (aiAnalysisStore.getActionByFundCode(fund.fundCode)!.suggested_ratio * 100).toFixed(1) }}%
+                  </span>
+                </template>
+                <span v-else class="ai-action-tag action-hold">--</span>
+              </td>
             </tr>
             <tr v-if="funds.length === 0 && !fundsStore.loading">
-              <td colspan="4" style="text-align: center; padding: 40px; color: var(--color-text-tertiary);">
+              <td :colspan="aiAnalysisStore.result ? 5 : 4" style="text-align: center; padding: 40px; color: var(--color-text-tertiary);">
                 暂无数据
               </td>
             </tr>
             <tr v-if="fundsStore.loading">
-              <td colspan="4" style="text-align: center; padding: 40px; color: var(--color-text-tertiary);">
+              <td :colspan="aiAnalysisStore.result ? 5 : 4" style="text-align: center; padding: 40px; color: var(--color-text-tertiary);">
                 加载中...
               </td>
             </tr>
@@ -426,6 +453,36 @@ tbody tr:hover .fund-action-btn {
   &.active {
     color: var(--color-primary);
     opacity: 1;
+  }
+}
+
+.fund-ai-action {
+  white-space: nowrap;
+}
+
+.ai-action-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: default;
+
+  &.action-buy {
+    color: var(--color-success);
+    background-color: var(--color-success-light);
+  }
+
+  &.action-sell {
+    color: var(--color-danger);
+    background-color: var(--color-danger-light);
+  }
+
+  &.action-hold {
+    color: var(--color-text-tertiary);
+    background-color: var(--color-bg-light);
   }
 }
 </style>
